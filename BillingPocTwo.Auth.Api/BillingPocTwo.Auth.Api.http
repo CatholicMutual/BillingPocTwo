@@ -1,0 +1,6 @@
+@BillingPocTwo.Auth.Api_HostAddress = http://localhost:5004
+
+GET {{BillingPocTwo.Auth.Api_HostAddress}}/api/auth/login
+Accept: application/json
+
+###
