@@ -35,7 +35,10 @@
     }
 
     [JSInvokable]
-    public async Task LogoutOnClose() => await ((CustomAuthenticationStateProvider)AuthStateProvider).LogoutAsync();
+    public async Task LogoutOnClose()
+    {
+        await ((CustomAuthenticationStateProvider)AuthStateProvider).LogoutAsync();
+    }
 
     private async Task Logout()
     {
