@@ -1,0 +1,80 @@
+﻿@page "/delete-user"
+
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject ILocalStorageService LocalStorage
+@attribute [Authorize(Roles = "Admin")]
+
+<h3>Delete User</h3>
+
+<EditForm Model="deleteUserModel" OnValidSubmit="HandleDeleteUser">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div>
+        <label>User Email:</label>
+        <InputText @bind-Value="deleteUserModel.Email" />
+    </div>
+    <button type="submit">Delete User</button>
+</EditForm>
+
+<p><em>@message</em></p>
+
+@code {
+    private DeleteUserDto deleteUserModel = new DeleteUserDto();
+    private string message = string.Empty;
+
+    private async Task HandleDeleteUser()
+    {
+        var token = await LocalStorage.GetItemAsync<string>("authToken");
+        if (string.IsNullOrEmpty(token))
+        {
+            message = "User is not authenticated";
+            return;
+        }
+
+        var currentUserEmail = GetUserEmailFromToken(token);
+        if (currentUserEmail == deleteUserModel.Email)
+        {
+            message = "You cannot delete your own account";
+            return;
+        }
+
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"api/auth/delete-user/{deleteUserModel.Email}");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await Http.SendAsync(request);
+        if (response.IsSuccessStatusCode)
+        {
+            message = "User deleted successfully";
+        }
+        else
+        {
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                message = "User not found";
+                return;
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden || response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                message = "You are not authorized to delete this user";
+                return;
+            }
+            var responseContent = await response.Content.ReadAsStringAsync();
+            message = $"Failed to delete user: {responseContent}";
+        }
+    }
+
+    private string GetUserEmailFromToken(string token)
+    {
+        var handler = new JwtSecurityTokenHandler();
+        var jwtToken = handler.ReadJwtToken(token);
+        var userEmailClaim = jwtToken.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.Email);
+        return userEmailClaim != null ? userEmailClaim.Value : string.Empty;
+    }
+}
+
+public class DeleteUserDto
+{
+    public string Email { get; set; }
+}

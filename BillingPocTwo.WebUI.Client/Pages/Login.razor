@@ -1,0 +1,50 @@
+﻿@page "/"
+@page "/login"
+
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject ILocalStorageService LocalStorage
+@inject AuthenticationStateProvider AuthStateProvider
+
+<h3>Login</h3>
+
+<EditForm Model="loginModel" OnValidSubmit="HandleLogin">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div>
+        <label>Email:</label>
+        <InputText @bind-Value="loginModel.Email" />
+    </div>
+    <div>
+        <label>Password:</label>
+        <InputText @bind-Value="loginModel.Password" type="password" />
+    </div>
+    <button type="submit">Login</button>
+</EditForm>
+
+<p><em>@message</em></p>
+
+@code {
+    private UserDto loginModel = new UserDto();
+    private string message = string.Empty;
+
+    private async Task HandleLogin()
+    {
+        var response = await Http.PostAsJsonAsync("api/auth/login", loginModel);
+        if (response.IsSuccessStatusCode)
+        {
+            var tokenResponse = await response.Content.ReadFromJsonAsync<TokenResponseDto>();
+            if (tokenResponse != null)
+            {
+                await LocalStorage.SetItemAsync("authToken", tokenResponse.AccessToken);
+                ((CustomAuthenticationStateProvider)AuthStateProvider).NotifyUserAuthentication(tokenResponse.AccessToken);
+                Navigation.NavigateTo("/");
+            }
+        }
+        else
+        {
+            message = "Invalid login attempt";
+        }
+    }
+}

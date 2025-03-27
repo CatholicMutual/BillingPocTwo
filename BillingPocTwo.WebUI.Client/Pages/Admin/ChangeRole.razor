@@ -1,0 +1,93 @@
+﻿@page "/change-role"
+@using System.Net.Http.Headers
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject ILocalStorageService LocalStorage
+@attribute [Authorize(Roles = "Admin")]
+
+<h3>Change User Role</h3>
+
+<EditForm Model="changeRoleModel" OnValidSubmit="HandleChangeRole">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div>
+        <label>User Email:</label>
+        <InputText @bind-Value="changeRoleModel.Email" />
+    </div>
+    <div>
+        <label>New Role:</label>
+        <InputSelect @bind-Value="changeRoleModel.NewRole">
+            @foreach (var role in userRoles)
+            {
+                <option value="@role.Name">@role.Name</option>
+            }
+        </InputSelect>
+    </div>
+    <button type="submit">Change Role</button>
+</EditForm>
+
+<p><em>@message</em></p>
+
+@code {
+    private ChangeRoleDto changeRoleModel = new ChangeRoleDto();
+    private List<UserRole> userRoles = new List<UserRole>();
+    private string message = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserRoles();
+    }
+
+    private async Task LoadUserRoles()
+    {
+        var token = await LocalStorage.GetItemAsync<string>("authToken");
+        if (string.IsNullOrEmpty(token))
+        {
+            message = "User is not authenticated";
+            return;
+        }
+
+        var request = new HttpRequestMessage(HttpMethod.Get, "api/auth/user-roles");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await Http.SendAsync(request);
+        if (response.IsSuccessStatusCode)
+        {
+            userRoles = await response.Content.ReadFromJsonAsync<List<UserRole>>();
+        }
+        else
+        {
+            message = "Failed to load user roles";
+        }
+    }
+
+    private async Task HandleChangeRole()
+    {
+        var token = await LocalStorage.GetItemAsync<string>("authToken");
+        if (string.IsNullOrEmpty(token))
+        {
+            message = "User is not authenticated";
+            return;
+        }
+
+        var request = new HttpRequestMessage(HttpMethod.Put, $"api/auth/change-user-role/{changeRoleModel.Email}")
+            {
+                Content = JsonContent.Create(changeRoleModel.NewRole)
+            };
+         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await Http.SendAsync(request);
+        if (response.IsSuccessStatusCode)
+        {
+            message = "Role changed successfully";
+        }
+        else
+        {
+            var responseContent = await response.Content.ReadAsStringAsync();
+            message = $"Failed to change role: {responseContent}";
+        }
+    }
+}
+
+

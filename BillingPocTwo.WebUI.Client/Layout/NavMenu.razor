@@ -1,4 +1,7 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserState UserState
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">BillingPocTwo.WebUI.Client</a>
         <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
@@ -24,6 +27,19 @@
                 <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
             </NavLink>
         </div>
+        @if (UserState.IsAdmin)
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="change-role">
+                    <span class="bi bi-person-badge-fill-nav-menu" aria-hidden="true"></span> Change Role
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="delete-user">
+                    <span class="bi bi-person-x-fill-nav-menu" aria-hidden="true"></span> Delete User
+                </NavLink>
+            </div>
+        }
     </nav>
 </div>
 
@@ -31,6 +47,33 @@
     private bool collapseNavMenu = true;
 
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AuthenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+        await UpdateUserState();
+    }
+
+    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+    {
+        await UpdateUserState();
+        StateHasChanged();
+    }
+
+    private async Task UpdateUserState()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity.IsAuthenticated)
+        {
+            UserState.IsAdmin = user.IsInRole("Admin");
+        }
+        else
+        {
+            UserState.IsAdmin = false;
+        }
+    }
 
     private void ToggleNavMenu()
     {
