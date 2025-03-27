@@ -1,5 +1,4 @@
-﻿@page "/"
-@page "/login"
+﻿@page "/login"
 
 @inject HttpClient Http
 @inject NavigationManager Navigation
@@ -39,7 +38,7 @@
             {
                 await LocalStorage.SetItemAsync("authToken", tokenResponse.AccessToken);
                 ((CustomAuthenticationStateProvider)AuthStateProvider).NotifyUserAuthentication(tokenResponse.AccessToken);
-                Navigation.NavigateTo("/");
+                Navigation.NavigateTo("/welcome2");
             }
         }
         else

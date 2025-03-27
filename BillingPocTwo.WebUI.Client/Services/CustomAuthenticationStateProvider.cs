@@ -1,6 +1,7 @@
 ﻿using BillingPocTwo.WebUI.Client.Entities;
 using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components.Authorization;
+using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text.Json;
 
@@ -11,11 +12,13 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
     {
         private readonly ILocalStorageService _localStorage;
         private readonly UserState _userState;
+        private readonly HttpClient _httpClient;
 
-        public CustomAuthenticationStateProvider(ILocalStorageService localStorage, UserState userState)
+        public CustomAuthenticationStateProvider(ILocalStorageService localStorage, UserState userState, HttpClient httpClient)
         {
             _localStorage = localStorage;
             _userState = userState;
+            _httpClient = httpClient;
         }
 
         public override async Task<AuthenticationState> GetAuthenticationStateAsync()
@@ -57,6 +60,14 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
 
         public async Task LogoutAsync()
         {
+            var token = await _localStorage.GetItemAsync<string>("authToken");
+            if (!string.IsNullOrEmpty(token))
+            {
+                var request = new HttpRequestMessage(HttpMethod.Post, "api/auth/logout");
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                await _httpClient.SendAsync(request);
+            }
+
             await _localStorage.RemoveItemAsync("authToken");
             NotifyUserLogout();
         }
