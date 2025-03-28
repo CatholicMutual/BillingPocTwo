@@ -33,6 +33,8 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
 
             // Set the admin status based on the token claims
             _userState.IsAdmin = user.IsInRole("Admin");
+            _userState.IsUser = user.IsInRole("User");
+            _userState.Email = user.FindFirst(ClaimTypes.Email)?.Value;
 
             return new AuthenticationState(user);
         }
@@ -44,6 +46,8 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
 
             // Set the admin status based on the token claims
             _userState.IsAdmin = user.IsInRole("Admin");
+            _userState.IsUser = user.IsInRole("User");
+            _userState.Email = user.FindFirst(ClaimTypes.Email)?.Value;
 
             NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(user)));
         }
@@ -54,6 +58,8 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
             var user = new ClaimsPrincipal(identity);
 
             _userState.IsAdmin = false;
+            _userState.IsUser = false;
+            _userState.Email = null;
 
             NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(user)));
         }
@@ -72,52 +78,4 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
             NotifyUserLogout();
         }
     }
-
-    public static class JwtParser
-    {
-        public static IEnumerable<Claim> ParseClaimsFromJwt(string jwt)
-        {
-            var claims = new List<Claim>();
-            var payload = jwt.Split('.')[1];
-            var jsonBytes = ParseBase64WithoutPadding(payload);
-            var keyValuePairs = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonBytes);
-
-            keyValuePairs.TryGetValue(ClaimTypes.Role, out object roles);
-
-            if (roles != null)
-            {
-                if (roles.ToString().Trim().StartsWith("["))
-                {
-                    var parsedRoles = JsonSerializer.Deserialize<string[]>(roles.ToString());
-
-                    foreach (var parsedRole in parsedRoles)
-                    {
-                        claims.Add(new Claim(ClaimTypes.Role, parsedRole));
-                    }
-                }
-                else
-                {
-                    claims.Add(new Claim(ClaimTypes.Role, roles.ToString()));
-                }
-
-                keyValuePairs.Remove(ClaimTypes.Role);
-            }
-
-            claims.AddRange(keyValuePairs.Select(kvp => new Claim(kvp.Key, kvp.Value.ToString())));
-
-            return claims;
-        }
-
-        private static byte[] ParseBase64WithoutPadding(string base64)
-        {
-            switch (base64.Length % 4)
-            {
-                case 2: base64 += "=="; break;
-                case 3: base64 += "="; break;
-            }
-            return Convert.FromBase64String(base64);
-        }
-    }
-
-
 }

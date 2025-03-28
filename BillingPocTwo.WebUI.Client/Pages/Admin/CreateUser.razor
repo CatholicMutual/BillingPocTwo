@@ -1,0 +1,61 @@
+﻿@page "/create-user"
+@attribute [Authorize(Roles = "Admin")]
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject ILocalStorageService LocalStorage
+
+<h3>Create User</h3>
+
+<EditForm Model="createUserModel" OnValidSubmit="HandleCreateUser">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div>
+        <label>Email:</label>
+        <InputText @bind-Value="createUserModel.Email" />
+    </div>
+    <div>
+        <label>Password:</label>
+        <InputText @bind-Value="createUserModel.Password" type="password" />
+    </div>
+    <div>
+        <label>Role:</label>
+        <InputText @bind-Value="createUserModel.Role" />
+    </div>
+    <button type="submit">Create User</button>
+</EditForm>
+
+<p><em>@message</em></p>
+
+@code {
+    private CreateUserDto createUserModel = new CreateUserDto();
+    private string message = string.Empty;
+
+    private async Task HandleCreateUser()
+    {
+        var token = await LocalStorage.GetItemAsync<string>("authToken");
+        if (string.IsNullOrEmpty(token))
+        {
+            message = "User is not authenticated";
+            return;
+        }
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "api/auth/create-user")
+        {
+            Content = JsonContent.Create(createUserModel)
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await Http.SendAsync(request);
+        if (response.IsSuccessStatusCode)
+        {
+            message = "User created successfully";
+            Thread.Sleep(2000);
+            Navigation.NavigateTo("/welcome2");
+        }
+        else
+        {
+            message = "Failed to create user";
+        }
+    }
+}

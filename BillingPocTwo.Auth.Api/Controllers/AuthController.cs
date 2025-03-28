@@ -3,6 +3,7 @@ using BillingPocTwo.Auth.Api.Data;
 using BillingPocTwo.Auth.Api.Models;
 using BillingPocTwo.Auth.Api.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,6 +26,19 @@ namespace BillingPocTwo.Auth.Api.Controllers
         public async Task<ActionResult<User>> Register(UserDto request)
         {
             var user = await _authService.RegisterAsync(request);
+            if (user is null)
+            {
+                return BadRequest("User already exists");
+            }
+
+            return Ok(user);
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost("create-user")]
+        public async Task<ActionResult<User>> CreateUser(CreateUserDto request)
+        {
+            var user = await _authService.RegisterAsync(new UserDto { Email = request.Email, Password = request.Password }, request.Role, true);
             if (user is null)
             {
                 return BadRequest("User already exists");
@@ -124,6 +138,35 @@ namespace BillingPocTwo.Auth.Api.Controllers
                 return Unauthorized("Invalid token");
             }
             return Ok(result);
+        }
+
+        [HttpPost("change-password")]
+        public async Task<IActionResult> ChangePassword(ChangePasswordDto request)
+        {
+            var userEmail = User.FindFirstValue(ClaimTypes.Email);
+            if (userEmail == null)
+            {
+                return Unauthorized();
+            }
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
+            if (user == null)
+            {
+                return NotFound("User not found");
+            }
+
+            if (request.NewPassword != request.ConfirmPassword)
+            {
+                return BadRequest("Passwords do not match");
+            }
+
+            var hashedPassword = new PasswordHasher<User>().HashPassword(user, request.NewPassword);
+            user.PasswordHash = hashedPassword;
+            user.ChangePasswordOnFirstLogin = false;
+
+            await _context.SaveChangesAsync();
+
+            return NoContent();
         }
 
     }

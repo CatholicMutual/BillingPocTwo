@@ -71,6 +71,36 @@ namespace BillingPocTwo.Auth.Api.Services
             return user;
         }
 
+        public async Task<User?> RegisterAsync(UserDto request, string roleName, bool changePasswordOnFirstLogin = true)
+        {
+            if (await context.Users.AnyAsync(u => u.Email.ToUpper() == request.Email.ToUpper()))
+            {
+                return null;
+            }
+
+            var user = new User()
+            {
+                Email = request.Email,
+                ChangePasswordOnFirstLogin = changePasswordOnFirstLogin
+            };
+
+            var hashedPassword = new PasswordHasher<User>()
+                .HashPassword(user, request.Password);
+            user.PasswordHash = hashedPassword;
+
+            var role = await context.UserRoles.FirstOrDefaultAsync(r => r.Name == roleName);
+            if (role != null)
+            {
+                user.UserRoleId = role.Id;
+                user.Role = role;
+            }
+
+            context.Users.Add(user);
+            await context.SaveChangesAsync();
+
+            return user;
+        }
+
         public async Task<bool> ChangeUserRoleAsync(string email, string newRole)
         {
             var user = await context.Users.FirstOrDefaultAsync(u => u.Email == email);
@@ -121,7 +151,8 @@ namespace BillingPocTwo.Auth.Api.Services
             {
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Role, userRole ?? "User") // Add role claim
+                new Claim(ClaimTypes.Role, userRole ?? "User"), // Add role claim
+                new Claim("ChangePasswordOnFirstLogin", user.ChangePasswordOnFirstLogin.ToString())
             };
 
             var key = new SymmetricSecurityKey(

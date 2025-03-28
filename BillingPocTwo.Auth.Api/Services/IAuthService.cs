@@ -6,6 +6,7 @@ namespace BillingPocTwo.Auth.Api.Services
     public interface IAuthService
     {
         Task<User?> RegisterAsync(UserDto request);
+        Task<User?> RegisterAsync(UserDto request, string role, bool changePasswordOnFirstLogin);
         Task<TokenResponseDto?> LoginAsync(UserDto request);
         Task<TokenResponseDto?> RefreshTokensAsync(RefreshTokenRequestDto request);
         Task LogoutAsync(Guid id);

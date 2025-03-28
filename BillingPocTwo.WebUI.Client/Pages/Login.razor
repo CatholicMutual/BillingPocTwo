@@ -1,5 +1,4 @@
 ﻿@page "/login"
-
 @inject HttpClient Http
 @inject NavigationManager Navigation
 @inject ILocalStorageService LocalStorage
@@ -37,8 +36,18 @@
             if (tokenResponse != null)
             {
                 await LocalStorage.SetItemAsync("authToken", tokenResponse.AccessToken);
-                ((CustomAuthenticationStateProvider)AuthStateProvider).NotifyUserAuthentication(tokenResponse.AccessToken);
-                Navigation.NavigateTo("/welcome2");
+                var claims = JwtParser.ParseClaimsFromJwt(tokenResponse.AccessToken);
+                var changePasswordClaim = claims.FirstOrDefault(c => c.Type == "ChangePasswordOnFirstLogin")?.Value;
+
+                if (bool.TryParse(changePasswordClaim, out bool changePasswordOnFirstLogin) && changePasswordOnFirstLogin)
+                {
+                    Navigation.NavigateTo("/change-password");
+                }
+                else
+                {
+                    ((CustomAuthenticationStateProvider)AuthStateProvider).NotifyUserAuthentication(tokenResponse.AccessToken);
+                    Navigation.NavigateTo("/welcome2");
+                }
             }
         }
         else
