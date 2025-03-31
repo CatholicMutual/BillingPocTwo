@@ -17,14 +17,27 @@
     </div>
     <div>
         <label>New Role:</label>
-        <InputSelect @bind-Value="changeRoleModel.NewRole">
+        <InputRadioGroup @bind-Value="changeRoleModel.NewRole">
             @foreach (var role in userRoles)
             {
-                <option value="@role.Name">@role.Name</option>
+                <div>
+                    <InputRadio Value="@role.Name" />
+                    <label>@role.Name</label>
+                </div>
             }
-        </InputSelect>
+        </InputRadioGroup>
     </div>
-    <button type="submit">Change Role</button>
+    <button type="submit" disabled="@isLoading">
+        @if (isLoading)
+        {
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            <span class="sr-only">Loading...</span>
+        }
+        else
+        {
+            <span>Change Role</span>
+        }
+    </button>
 </EditForm>
 
 <p><em>@message</em></p>
@@ -33,6 +46,7 @@
     private ChangeRoleDto changeRoleModel = new ChangeRoleDto();
     private List<UserRole> userRoles = new List<UserRole>();
     private string message = string.Empty;
+    private bool isLoading = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -64,18 +78,20 @@
 
     private async Task HandleChangeRole()
     {
+        isLoading = true;
         var token = await LocalStorage.GetItemAsync<string>("authToken");
         if (string.IsNullOrEmpty(token))
         {
             message = "User is not authenticated";
+            isLoading = false;
             return;
         }
 
         var request = new HttpRequestMessage(HttpMethod.Put, $"api/auth/change-user-role/{changeRoleModel.Email}")
-            {
-                Content = JsonContent.Create(changeRoleModel.NewRole)
-            };
-         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        {
+            Content = JsonContent.Create(changeRoleModel)
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         var response = await Http.SendAsync(request);
         if (response.IsSuccessStatusCode)
@@ -87,7 +103,12 @@
             var responseContent = await response.Content.ReadAsStringAsync();
             message = $"Failed to change role: {responseContent}";
         }
+        isLoading = false;
+    }
+
+    public class ChangeRoleDto
+    {
+        public string Email { get; set; }
+        public string NewRole { get; set; }
     }
 }
-
-

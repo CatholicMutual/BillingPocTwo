@@ -57,7 +57,7 @@ namespace BillingPocTwo.Auth.Api.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpPut("change-user-role/{email}")]
-        public async Task<IActionResult> ChangeUserRole(string email, [FromBody] string newRole)
+        public async Task<IActionResult> ChangeUserRole(string email, [FromBody] ChangeRoleDto request)
         {
             var currentUserEmail = User.FindFirstValue(ClaimTypes.Email);
             if (currentUserEmail == null)
@@ -70,7 +70,7 @@ namespace BillingPocTwo.Auth.Api.Controllers
                 return BadRequest("You cannot change your own user role");
             }
 
-            var result = await _authService.ChangeUserRoleAsync(email, newRole);
+            var result = await _authService.ChangeUserRoleAsync(email, request.NewRole);
             if (!result)
             {
                 return BadRequest("Failed to change user role");
@@ -153,6 +153,12 @@ namespace BillingPocTwo.Auth.Api.Controllers
             if (user == null)
             {
                 return NotFound("User not found");
+            }
+
+            var passwordHasher = new PasswordHasher<User>();
+            if (passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.CurrentPassword) == PasswordVerificationResult.Failed)
+            {
+                return BadRequest("Current password is incorrect");
             }
 
             if (request.NewPassword != request.ConfirmPassword)
