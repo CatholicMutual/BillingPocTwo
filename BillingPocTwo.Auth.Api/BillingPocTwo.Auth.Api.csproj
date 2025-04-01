@@ -28,6 +28,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\BillingPocTwo.Shared\BillingPocTwo.Shared.csproj" />
     <ProjectReference Include="..\BillingPocTwo.WebUI.Client\BillingPocTwo.WebUI.Client.csproj" />
   </ItemGroup>
 

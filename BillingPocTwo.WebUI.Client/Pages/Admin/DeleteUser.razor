@@ -15,7 +15,17 @@
         <label>User Email:</label>
         <InputText @bind-Value="deleteUserModel.Email" />
     </div>
-    <button type="submit">Delete User</button>
+    <button type="submit" disabled="@isLoading">
+        @if (isLoading)
+        {
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            <span class="sr-only">Loading...</span>
+        }
+        else
+        {
+            <span>Delete User</span>
+        }
+    </button>
 </EditForm>
 
 <p><em>@message</em></p>
@@ -23,9 +33,13 @@
 @code {
     private DeleteUserDto deleteUserModel = new DeleteUserDto();
     private string message = string.Empty;
+    private bool isLoading = false;
+
 
     private async Task HandleDeleteUser()
     {
+        isLoading = true;
+
         var token = await LocalStorage.GetItemAsync<string>("authToken");
         if (string.IsNullOrEmpty(token))
         {
@@ -47,21 +61,16 @@
         if (response.IsSuccessStatusCode)
         {
             message = "User deleted successfully";
+            isLoading = false;
+            // Thread.Sleep(2000);
+            // Navigation.NavigateTo("/welcome2");
         }
         else
         {
-            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-            {
-                message = "User not found";
-                return;
-            }
-            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden || response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-            {
-                message = "You are not authorized to delete this user";
-                return;
-            }
             var responseContent = await response.Content.ReadAsStringAsync();
             message = $"Failed to delete user: {responseContent}";
+
+            isLoading = false;
         }
     }
 
@@ -72,9 +81,4 @@
         var userEmailClaim = jwtToken.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.Email);
         return userEmailClaim != null ? userEmailClaim.Value : string.Empty;
     }
-}
-
-public class DeleteUserDto
-{
-    public string Email { get; set; }
 }

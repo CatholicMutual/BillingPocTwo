@@ -1,7 +1,8 @@
 ﻿using System.Security.Claims;
 using BillingPocTwo.Auth.Api.Data;
-using BillingPocTwo.Auth.Api.Models;
 using BillingPocTwo.Auth.Api.Services;
+using BillingPocTwo.Shared.DataObjects;
+using BillingPocTwo.Shared.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;

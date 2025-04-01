@@ -64,7 +64,8 @@
         }
         else
         {
-            message = "Invalid login attempt";
+            var errorResponse = await response.Content.ReadAsStringAsync();
+            message = $"{errorResponse}";
         }
         isLoading = false;
     }

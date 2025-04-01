@@ -16,14 +16,29 @@
         <label>Password:</label>
         <InputText @bind-Value="registerModel.Password" type="password" />
     </div>
-    <button type="submit">Register</button>
+    <button type="submit" disabled="@isLoading">
+        @if (isLoading)
+        {
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            <span class="sr-only">Loading...</span>
+        }
+        else
+        {
+            <span>Register</span>
+        }
+    </button>
 </EditForm>
+
+<p><em>@message</em></p>
 
 @code {
     private UserDto registerModel = new UserDto();
+    private string message = string.Empty;
+    private bool isLoading = false;
 
     private async Task HandleRegister()
     {
+        isLoading = true;
         var response = await Http.PostAsJsonAsync("api/auth/register", registerModel);
         if (response.IsSuccessStatusCode)
         {
@@ -32,8 +47,9 @@
         }
         else
         {
-            // Handle registration failure
+            var errorResponse = await response.Content.ReadAsStringAsync();
+            message = $"{errorResponse}";
         }
+        isLoading = false;
     }
 }
-

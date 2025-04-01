@@ -22,7 +22,17 @@
         <label>Role:</label>
         <InputText @bind-Value="createUserModel.Role" />
     </div>
-    <button type="submit">Create User</button>
+    <button type="submit" disabled="@isLoading">
+        @if (isLoading)
+        {
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            <span class="sr-only">Loading...</span>
+        }
+        else
+        {
+            <span>Create User</span>
+        }
+    </button>
 </EditForm>
 
 <p><em>@message</em></p>
@@ -30,13 +40,16 @@
 @code {
     private CreateUserDto createUserModel = new CreateUserDto();
     private string message = string.Empty;
+    private bool isLoading = false;
 
     private async Task HandleCreateUser()
     {
+        isLoading = true;
         var token = await LocalStorage.GetItemAsync<string>("authToken");
         if (string.IsNullOrEmpty(token))
         {
             message = "User is not authenticated";
+            isLoading = false;
             return;
         }
 
@@ -55,7 +68,9 @@
         }
         else
         {
-            message = "Failed to create user";
+            var responseContent = await response.Content.ReadAsStringAsync();
+            message = $"Failed to create user: {responseContent}";
         }
+        isLoading = false;
     }
 }

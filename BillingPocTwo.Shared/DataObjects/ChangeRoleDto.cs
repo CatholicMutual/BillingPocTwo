@@ -1,4 +1,4 @@
-﻿namespace BillingPocTwo.WebUI.Client.Models
+﻿namespace BillingPocTwo.Shared.DataObjects
 {
     public class ChangeRoleDto
     {

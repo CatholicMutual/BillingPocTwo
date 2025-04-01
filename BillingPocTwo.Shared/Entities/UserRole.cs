@@ -1,4 +1,4 @@
-﻿namespace BillingPocTwo.Auth.Api.Data
+﻿namespace BillingPocTwo.Shared.Entities
 {
     public class UserRole
     {

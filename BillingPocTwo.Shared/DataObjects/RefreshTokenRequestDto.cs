@@ -1,4 +1,4 @@
-﻿namespace BillingPocTwo.Auth.Api.Models
+﻿namespace BillingPocTwo.Shared.DataObjects
 {
     public class RefreshTokenRequestDto
     {

@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using BillingPocTwo.Auth.Api.Controllers;
+using BillingPocTwo.Shared.Entities;
 
 namespace BillingPocTwo.Auth.Api.Data
 {

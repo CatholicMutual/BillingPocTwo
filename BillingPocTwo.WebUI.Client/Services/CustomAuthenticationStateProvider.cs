@@ -1,4 +1,4 @@
-﻿using BillingPocTwo.WebUI.Client.Entities;
+﻿using BillingPocTwo.Shared.Entities;
 using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components.Authorization;
 using System.Net.Http.Headers;

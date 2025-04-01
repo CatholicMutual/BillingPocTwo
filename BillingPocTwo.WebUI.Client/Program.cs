@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components.Authorization;
 using BillingPocTwo.WebUI.Client.Services;
-using BillingPocTwo.WebUI.Client.Entities;
+using BillingPocTwo.Shared.Entities;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");

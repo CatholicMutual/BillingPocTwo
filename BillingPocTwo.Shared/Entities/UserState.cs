@@ -1,4 +1,4 @@
-﻿namespace BillingPocTwo.WebUI.Client.Entities
+﻿namespace BillingPocTwo.Shared.Entities
 {
     public class UserState
     {
