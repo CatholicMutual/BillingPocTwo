@@ -4,6 +4,7 @@ using BillingPocTwo.Shared.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System.Data;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -14,10 +15,9 @@ namespace BillingPocTwo.Auth.Api.Services
 {
     public class AuthService(UserDbContext context, IConfiguration configuration) : IAuthService
     {
-        
         public async Task<TokenResponseDto?> LoginAsync(UserDto request)
         {
-            var user = await context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+            var user = await context.Users.Include(u => u.Roles).FirstOrDefaultAsync(u => u.Email == request.Email);
 
             if ((user is null) || (new PasswordHasher<User>().VerifyHashedPassword(user, user.PasswordHash, request.Password) == PasswordVerificationResult.Failed))
             {
@@ -57,14 +57,17 @@ namespace BillingPocTwo.Auth.Api.Services
                 return null;
             }
 
-            var user = new User();
+            var user = new User
+            {
+                Email = request.Email,
+                PasswordHash = new PasswordHasher<User>().HashPassword(null, request.Password)
+            };
 
-            var hashedPassword = new PasswordHasher<User>()
-                .HashPassword(user, request.Password);
-
-            user.Email = request.Email;
-            user.PasswordHash = hashedPassword;
-            user.Role = await context.UserRoles.FirstOrDefaultAsync(r => r.Name == "User");
+            var role = await context.UserRoles.FirstOrDefaultAsync(r => r.Name == "User");
+            if (role != null)
+            {
+                user.Roles.Add(role);
+            }
 
             context.Users.Add(user);
             await context.SaveChangesAsync();
@@ -72,7 +75,7 @@ namespace BillingPocTwo.Auth.Api.Services
             return user;
         }
 
-        public async Task<User?> RegisterAsync(UserDto request, string roleName, bool changePasswordOnFirstLogin = true)
+        public async Task<User?> RegisterAsync(CreateUserDto request, bool changePasswordOnFirstLogin = true)
         {
             if (await context.Users.AnyAsync(u => u.Email.ToUpper() == request.Email.ToUpper()))
             {
@@ -82,19 +85,12 @@ namespace BillingPocTwo.Auth.Api.Services
             var user = new User()
             {
                 Email = request.Email,
+                PasswordHash = new PasswordHasher<User>().HashPassword(null, request.Password),
                 ChangePasswordOnFirstLogin = changePasswordOnFirstLogin
             };
 
-            var hashedPassword = new PasswordHasher<User>()
-                .HashPassword(user, request.Password);
-            user.PasswordHash = hashedPassword;
-
-            var role = await context.UserRoles.FirstOrDefaultAsync(r => r.Name == roleName);
-            if (role != null)
-            {
-                user.UserRoleId = role.Id;
-                user.Role = role;
-            }
+            var roles = await context.UserRoles.Where(r => request.Roles.Contains(r.Name)).ToListAsync();
+            user.Roles = roles;
 
             context.Users.Add(user);
             await context.SaveChangesAsync();
@@ -102,22 +98,17 @@ namespace BillingPocTwo.Auth.Api.Services
             return user;
         }
 
-        public async Task<bool> ChangeUserRoleAsync(string email, string newRole)
+        public async Task<bool> ChangeUserRoleAsync(string email, List<string> newRoles)
         {
-            var user = await context.Users.FirstOrDefaultAsync(u => u.Email == email);
+            var user = await context.Users.Include(u => u.Roles).FirstOrDefaultAsync(u => u.Email == email);
             if (user == null)
             {
                 return false;
             }
 
-            var role = await context.UserRoles.FirstOrDefaultAsync(r => r.Name == newRole);
-            if (role == null)
-            {
-                return false;
-            }
+            var roles = await context.UserRoles.Where(r => newRoles.Contains(r.Name)).ToListAsync();
+            user.Roles = roles;
 
-            user.UserRoleId = role.Id;
-            user.Role = role;
             await context.SaveChangesAsync();
             return true;
         }
@@ -146,15 +137,16 @@ namespace BillingPocTwo.Auth.Api.Services
 
         private async Task<string> CreateToken(User user)
         {
-            var userRole = await GetRoleNameByIdAsync(user.UserRoleId ?? 2);
+            var userRoles = user.Roles.Select(r => r.Name).ToList();
 
             var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Role, userRole ?? "User"), // Add role claim
-                new Claim("ChangePasswordOnFirstLogin", user.ChangePasswordOnFirstLogin.ToString())
-            };
+                {
+                    new Claim(ClaimTypes.Email, user.Email),
+                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                    new Claim("ChangePasswordOnFirstLogin", user.ChangePasswordOnFirstLogin.ToString())
+                };
+
+            claims.AddRange(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
 
             var key = new SymmetricSecurityKey(
                     Encoding.UTF8.GetBytes(configuration.GetValue<string>("JwtSettings:Secret")!));
@@ -210,6 +202,5 @@ namespace BillingPocTwo.Auth.Api.Services
             var role = await context.UserRoles.FirstOrDefaultAsync(r => r.Id == userRoleId);
             return role?.Name;
         }
-
     }
 }

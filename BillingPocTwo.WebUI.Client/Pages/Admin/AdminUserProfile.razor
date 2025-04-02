@@ -1,0 +1,80 @@
+﻿@page "/admin-user-profile"
+@using System.Net.Http.Headers
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject ILocalStorageService LocalStorage
+@attribute [Authorize(Roles = "Admin")]
+
+<h3>User Profile</h3>
+
+<EditForm Model="searchModel" OnValidSubmit="SearchUser">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div>
+        <label>User Email:</label>
+        <InputText @bind-Value="searchModel.Email" />
+        <button type="submit">Search</button>
+    </div>
+</EditForm>
+
+@if (userProfile != null)
+{
+    <div>
+        <p><strong>Email:</strong> @userProfile.Email</p>
+        <p><strong>User ID:</strong> @userProfile.UserId</p>
+        <p><strong>Active Roles:</strong></p>
+        <ul>
+            @foreach (var role in userProfile.Roles)
+            {
+                <li>@role</li>
+            }
+        </ul>
+    </div>
+}
+else if (isLoading)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <p>@message</p>
+}
+
+@code {
+    private UserProfileDto userProfile;
+    private string message = string.Empty;
+    private bool isLoading = false;
+    private SearchModel searchModel = new SearchModel();
+
+    private async Task SearchUser()
+    {
+        isLoading = true;
+        var token = await LocalStorage.GetItemAsync<string>("authToken");
+        if (string.IsNullOrEmpty(token))
+        {
+            message = "User is not authenticated";
+            isLoading = false;
+            return;
+        }
+
+        var request = new HttpRequestMessage(HttpMethod.Get, $"api/auth/user-profile/{searchModel.Email}");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await Http.SendAsync(request);
+        if (response.IsSuccessStatusCode)
+        {
+            userProfile = await response.Content.ReadFromJsonAsync<UserProfileDto>();
+        }
+        else
+        {
+            message = "Failed to load user profile";
+        }
+        isLoading = false;
+    }
+
+    private class SearchModel
+    {
+        public string Email { get; set; }
+    }
+}

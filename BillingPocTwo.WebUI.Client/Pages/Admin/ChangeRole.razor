@@ -13,19 +13,20 @@
 
     <div>
         <label>User Email:</label>
-        <InputText @bind-Value="changeRoleModel.Email" />
+        <InputText @bind-Value="userEmail" />
+        <button type="button" @onclick="SearchUser">Search for User</button>
     </div>
+    @if (isSearchDone)
+    {
     <div>
-        <label>New Role:</label>
-        <InputRadioGroup @bind-Value="changeRoleModel.NewRole">
-            @foreach (var role in userRoles)
-            {
-                <div>
-                    <InputRadio Value="@role.Name" />
-                    <label>@role.Name</label>
-                </div>
-            }
-        </InputRadioGroup>
+        <label>New Roles:</label>
+        @foreach (var role in availableRoles)
+        {
+            <div>
+                <InputCheckbox @bind-Value="role.IsSelected" />
+                <label>@role.Name</label>
+            </div>
+        }
     </div>
     <button type="submit" disabled="@isLoading">
         @if (isLoading)
@@ -38,22 +39,21 @@
             <span>Change Role</span>
         }
     </button>
+    }
 </EditForm>
 
 <p><em>@message</em></p>
 
 @code {
+    private string userEmail = string.Empty;
     private ChangeRoleDto changeRoleModel = new ChangeRoleDto();
-    private List<UserRole> userRoles = new List<UserRole>();
+    private List<RoleSelection> availableRoles = new List<RoleSelection>();
     private string message = string.Empty;
     private bool isLoading = false;
+    private bool isSearchDone = false;
 
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadUserRoles();
-    }
 
-    private async Task LoadUserRoles()
+    private async Task SearchUser()
     {
         var token = await LocalStorage.GetItemAsync<string>("authToken");
         if (string.IsNullOrEmpty(token))
@@ -62,13 +62,43 @@
             return;
         }
 
-        var request = new HttpRequestMessage(HttpMethod.Get, "api/auth/user-roles");
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        // Load all available roles
+        var requestRoles = new HttpRequestMessage(HttpMethod.Get, "api/auth/user-roles");
+        requestRoles.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var response = await Http.SendAsync(request);
-        if (response.IsSuccessStatusCode)
+        var responseRoles = await Http.SendAsync(requestRoles);
+        if (responseRoles.IsSuccessStatusCode)
         {
-            userRoles = await response.Content.ReadFromJsonAsync<List<UserRole>>();
+            var roles = await responseRoles.Content.ReadFromJsonAsync<List<UserRole>>();
+            if (roles == null)
+            {
+                message = "Failed to load user roles";
+                return;
+            }
+
+            // Fetch user roles
+            var request = new HttpRequestMessage(HttpMethod.Get, $"api/auth/user-roles/{userEmail}");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            var response = await Http.SendAsync(request);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ChangeRoleDto>();
+                if (result != null)
+                {
+                    changeRoleModel = result;
+                    availableRoles = roles.Select(r => new RoleSelection
+                        {
+                            Name = r.Name,
+                            IsSelected = result.NewRoles.Contains(r.Name)
+                        }).ToList();
+                    isSearchDone = true;
+                }
+            }
+            else
+            {
+                message = "Failed to load user roles";
+            }
         }
         else
         {
@@ -87,10 +117,12 @@
             return;
         }
 
-        var request = new HttpRequestMessage(HttpMethod.Put, $"api/auth/change-user-role/{changeRoleModel.Email}")
-        {
-            Content = JsonContent.Create(changeRoleModel)
-        };
+        changeRoleModel.NewRoles = availableRoles.Where(r => r.IsSelected).Select(r => r.Name).ToList();
+
+        var request = new HttpRequestMessage(HttpMethod.Put, "api/auth/change-user-role")
+            {
+                Content = JsonContent.Create(changeRoleModel)
+            };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         var response = await Http.SendAsync(request);
@@ -106,9 +138,9 @@
         isLoading = false;
     }
 
-    public class ChangeRoleDto
+    private class RoleSelection
     {
-        public string Email { get; set; }
-        public string NewRole { get; set; }
+        public string Name { get; set; }
+        public bool IsSelected { get; set; }
     }
 }

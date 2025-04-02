@@ -20,7 +20,13 @@
     </div>
     <div>
         <label>Role:</label>
-        <InputText @bind-Value="createUserModel.Role" />
+        @foreach (var role in availableRoles)
+        {
+            <div>
+                <InputCheckbox @bind-Value="role.IsSelected" />
+                <label>@role.Name</label>
+            </div>
+        }
     </div>
     <button type="submit" disabled="@isLoading">
         @if (isLoading)
@@ -39,8 +45,41 @@
 
 @code {
     private CreateUserDto createUserModel = new CreateUserDto();
+    private List<RoleSelection> availableRoles = new List<RoleSelection>();
     private string message = string.Empty;
     private bool isLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRoles();
+    }
+
+    private async Task LoadRoles()
+    {
+        var token = await LocalStorage.GetItemAsync<string>("authToken");
+        if (string.IsNullOrEmpty(token))
+        {
+            message = "User is not authenticated";
+            return;
+        }
+
+        var request = new HttpRequestMessage(HttpMethod.Get, "api/auth/user-roles");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await Http.SendAsync(request);
+        if (response.IsSuccessStatusCode)
+        {
+            var roles = await response.Content.ReadFromJsonAsync<List<UserRole>>();
+            if (roles != null)
+            {
+                availableRoles = roles.Select(r => new RoleSelection { Name = r.Name }).ToList();
+            }
+        }
+        else
+        {
+            message = "Failed to load roles";
+        }
+    }
 
     private async Task HandleCreateUser()
     {
@@ -52,6 +91,8 @@
             isLoading = false;
             return;
         }
+
+        createUserModel.Roles = availableRoles.Where(r => r.IsSelected).Select(r => r.Name).ToList();
 
         var request = new HttpRequestMessage(HttpMethod.Post, "api/auth/create-user")
         {
@@ -72,5 +113,11 @@
             message = $"Failed to create user: {responseContent}";
         }
         isLoading = false;
+    }
+
+    private class RoleSelection
+    {
+        public string Name { get; set; }
+        public bool IsSelected { get; set; }
     }
 }

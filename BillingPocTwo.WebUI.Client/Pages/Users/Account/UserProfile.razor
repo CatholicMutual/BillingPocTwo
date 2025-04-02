@@ -1,0 +1,80 @@
+﻿@page "/user-profile"
+@using System.Net.Http.Headers
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject ILocalStorageService LocalStorage
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [Authorize]
+
+<h3>User Profile</h3>
+
+@if (userProfile != null)
+{
+    <div>
+        <p><strong>Email:</strong> @userProfile.Email</p>
+        <p><strong>User ID:</strong> @userProfile.UserId</p>
+        <p><strong>Active Roles:</strong></p>
+        <ul>
+            @foreach (var role in userProfile.Roles)
+            {
+                <li>@role</li>
+            }
+        </ul>
+    </div>
+}
+else if (isLoading)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <p>@message</p>
+}
+
+@code {
+    private UserProfileDto userProfile;
+    private string message = string.Empty;
+    private bool isLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserProfile();
+    }
+
+    private async Task LoadUserProfile()
+    {
+        isLoading = true;
+        var token = await LocalStorage.GetItemAsync<string>("authToken");
+        if (string.IsNullOrEmpty(token))
+        {
+            message = "User is not authenticated";
+            isLoading = false;
+            return;
+        }
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var email = user.FindFirst(c => c.Type == ClaimTypes.Email)?.Value;
+
+        if (string.IsNullOrEmpty(email))
+        {
+            message = "Failed to retrieve user email";
+            isLoading = false;
+            return;
+        }
+
+        var request = new HttpRequestMessage(HttpMethod.Get, $"api/auth/user-profile/{email}");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await Http.SendAsync(request);
+        if (response.IsSuccessStatusCode)
+        {
+            userProfile = await response.Content.ReadFromJsonAsync<UserProfileDto>();
+        }
+        else
+        {
+            message = "Failed to load user profile";
+        }
+        isLoading = false;
+    }
+}

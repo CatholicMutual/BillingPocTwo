@@ -39,7 +39,7 @@ namespace BillingPocTwo.Auth.Api.Controllers
         [HttpPost("create-user")]
         public async Task<ActionResult<User>> CreateUser(CreateUserDto request)
         {
-            var user = await _authService.RegisterAsync(new UserDto { Email = request.Email, Password = request.Password }, request.Role, true);
+            var user = await _authService.RegisterAsync(request, true);
             if (user is null)
             {
                 return BadRequest("User already exists");
@@ -57,25 +57,71 @@ namespace BillingPocTwo.Auth.Api.Controllers
         }
 
         [Authorize(Roles = "Admin")]
-        [HttpPut("change-user-role/{email}")]
-        public async Task<IActionResult> ChangeUserRole(string email, [FromBody] ChangeRoleDto request)
+        [HttpGet("user-roles/{email}")]
+        public async Task<ActionResult<ChangeRoleDto>> GetUserRolesByEmail(string email)
         {
-            var currentUserEmail = User.FindFirstValue(ClaimTypes.Email);
-            if (currentUserEmail == null)
+            var user = await _context.Users.Include(u => u.Roles).FirstOrDefaultAsync(u => u.Email == email);
+            if (user == null)
             {
-                return Unauthorized();
+                return NotFound("User not found");
             }
 
-            if (currentUserEmail == email)
+            var userRoles = user.Roles.Select(r => r.Name).ToList();
+
+            var result = new ChangeRoleDto
             {
-                return BadRequest("You cannot change your own user role");
+                Email = email,
+                NewRoles = userRoles
+            };
+
+            return Ok(result);
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpGet("search-users")]
+        public async Task<ActionResult<IEnumerable<User>>> SearchUsers([FromQuery] string email)
+        {
+            var users = await _context.Users
+                .Where(u => u.Email.Contains(email))
+                .ToListAsync();
+
+            return Ok(users);
+        }
+
+        [Authorize]
+        [HttpGet("user-profile/{email}")]
+        public async Task<ActionResult<UserProfileDto>> GetUserProfile(string email)
+        {
+            var user = await _context.Users.Include(u => u.Roles).FirstOrDefaultAsync(u => u.Email == email);
+            if (user == null)
+            {
+                return NotFound("User not found");
             }
 
-            var result = await _authService.ChangeUserRoleAsync(email, request.NewRole);
-            if (!result)
+            var userProfile = new UserProfileDto
             {
-                return BadRequest("Failed to change user role");
+                Email = user.Email,
+                UserId = user.Id,
+                Roles = user.Roles.Select(r => r.Name).ToList()
+            };
+
+            return Ok(userProfile);
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPut("change-user-role")]
+        public async Task<IActionResult> ChangeUserRole(ChangeRoleDto request)
+        {
+            var user = await _context.Users.Include(u => u.Roles).FirstOrDefaultAsync(u => u.Email == request.Email);
+            if (user == null)
+            {
+                return NotFound("User not found");
             }
+
+            var roles = await _context.UserRoles.Where(r => request.NewRoles.Contains(r.Name)).ToListAsync();
+            user.Roles = roles;
+
+            await _context.SaveChangesAsync();
 
             return NoContent();
         }

@@ -7,9 +7,7 @@
         public string PasswordHash { get; set; }
         public string? RefreshToken { get; set; }
         public DateTime? RefreshTokenExpiration { get; set; }
-        public int? UserRoleId { get; set; }
-        public UserRole? Role { get; set; }
-        public bool ChangePasswordOnFirstLogin { get; set; } // New property
-
+        public ICollection<UserRole> Roles { get; set; } = new List<UserRole>();
+        public bool ChangePasswordOnFirstLogin { get; set; }
     }
 }
