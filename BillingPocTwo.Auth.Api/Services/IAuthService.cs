@@ -5,13 +5,13 @@ namespace BillingPocTwo.Auth.Api.Services
 {
     public interface IAuthService
     {
-        Task<User?> RegisterAsync(UserDto request);
         Task<User?> RegisterAsync(CreateUserDto request, bool changePasswordOnFirstLogin);
-        Task<TokenResponseDto?> LoginAsync(UserDto request);
+        Task<TokenResponseDto?> LoginAsync(LoginDto request);
         Task<TokenResponseDto?> RefreshTokensAsync(RefreshTokenRequestDto request);
         Task LogoutAsync(Guid id);
-        Task<bool> DeleterUserAsync(string email);
-        Task<bool> ChangeUserRoleAsync(string email, List<string> newRoles);
+        Task<bool> DeleteUserAsync(string currentUserEmail, string email);
+        Task<bool> ChangeUserRoleAsync(string currentUserEmail, string email, List<string> newRoles);
+        Task<bool> UpdateUserAsync(User user, string modifiedBy);
 
     }
 }

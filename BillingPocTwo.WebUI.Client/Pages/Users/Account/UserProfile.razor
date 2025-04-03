@@ -1,5 +1,4 @@
 ﻿@page "/user-profile"
-@using System.Net.Http.Headers
 @inject HttpClient Http
 @inject NavigationManager Navigation
 @inject ILocalStorageService LocalStorage
@@ -11,8 +10,12 @@
 @if (userProfile != null)
 {
     <div>
+        <p><strong>First Name:</strong> @userProfile.FirstName</p>
+        <p><strong>Last Name:</strong> @userProfile.LastName</p>
         <p><strong>Email:</strong> @userProfile.Email</p>
         <p><strong>User ID:</strong> @userProfile.UserId</p>
+        <p><strong>Active:</strong> @(userProfile.Active ? "Yes" : "No")</p>
+        <p><strong>Service User:</strong> @(userProfile.ServiceUser ? "Yes" : "No")</p>
         <p><strong>Active Roles:</strong></p>
         <ul>
             @foreach (var role in userProfile.Roles)

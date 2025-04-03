@@ -23,10 +23,19 @@ namespace BillingPocTwo.Auth.Api.Controllers
             _context = context;
         }
 
-        [HttpPost("register")]
-        public async Task<ActionResult<User>> Register(UserDto request)
+        [Authorize(Roles = "Admin")]
+        [HttpPost("create-user")]
+        public async Task<ActionResult<User>> CreateUser(CreateUserDto request)
         {
-            var user = await _authService.RegisterAsync(request);
+            var currentUserEmail = User.FindFirstValue(ClaimTypes.Email);
+            if (currentUserEmail == null)
+            {
+                return Unauthorized();
+            }
+
+            request.CreatedBy = currentUserEmail; // Set the creator
+
+            var user = await _authService.RegisterAsync(request, true);
             if (user is null)
             {
                 return BadRequest("User already exists");
@@ -36,16 +45,31 @@ namespace BillingPocTwo.Auth.Api.Controllers
         }
 
         [Authorize(Roles = "Admin")]
-        [HttpPost("create-user")]
-        public async Task<ActionResult<User>> CreateUser(CreateUserDto request)
+        [HttpPut("update-user")]
+        public async Task<IActionResult> UpdateUser(UserDto request)
         {
-            var user = await _authService.RegisterAsync(request, true);
-            if (user is null)
+            var currentUserEmail = User.FindFirstValue(ClaimTypes.Email);
+            if (currentUserEmail == null)
             {
-                return BadRequest("User already exists");
+                return Unauthorized();
             }
 
-            return Ok(user);
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+            if (user == null)
+            {
+                return NotFound("User not found");
+            }
+
+            user.FirstName = request.FirstName;
+            user.LastName = request.LastName;
+
+            var result = await _authService.UpdateUserAsync(user, currentUserEmail);
+            if (!result)
+            {
+                return BadRequest("Failed to update user");
+            }
+
+            return NoContent();
         }
 
         [Authorize(Roles = "Admin")]
@@ -71,7 +95,11 @@ namespace BillingPocTwo.Auth.Api.Controllers
             var result = new ChangeRoleDto
             {
                 Email = email,
-                NewRoles = userRoles
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                NewRoles = userRoles,
+                Active = user.Active,
+                ServiceUser = user.ServiceUser
             };
 
             return Ok(result);
@@ -102,6 +130,10 @@ namespace BillingPocTwo.Auth.Api.Controllers
             {
                 Email = user.Email,
                 UserId = user.Id,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Active = user.Active,
+                ServiceUser = user.ServiceUser,
                 Roles = user.Roles.Select(r => r.Name).ToList()
             };
 
@@ -109,17 +141,37 @@ namespace BillingPocTwo.Auth.Api.Controllers
         }
 
         [Authorize(Roles = "Admin")]
-        [HttpPut("change-user-role")]
-        public async Task<IActionResult> ChangeUserRole(ChangeRoleDto request)
+        [HttpPut("change-user-details")]
+        public async Task<IActionResult> ChangeUserDetails(ChangeRoleDto request)
         {
+            var currentUserEmail = User.FindFirstValue(ClaimTypes.Email);
+            if (currentUserEmail == null)
+            {
+                return Unauthorized();
+            }
+
+            if (currentUserEmail == request.Email)
+            {
+                return BadRequest("You cannot modify your own account");
+            }
+
             var user = await _context.Users.Include(u => u.Roles).FirstOrDefaultAsync(u => u.Email == request.Email);
             if (user == null)
             {
                 return NotFound("User not found");
             }
 
+            user.FirstName = request.FirstName;
+            user.LastName = request.LastName;
+            user.Email = request.Email;
+            user.Active = request.Active;
+            user.ServiceUser = request.ServiceUser;
+
             var roles = await _context.UserRoles.Where(r => request.NewRoles.Contains(r.Name)).ToListAsync();
             user.Roles = roles;
+
+            user.ModifiedBy = currentUserEmail;
+            user.ModifiedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
 
@@ -141,7 +193,7 @@ namespace BillingPocTwo.Auth.Api.Controllers
                 return BadRequest("You cannot delete your own account");
             }
 
-            var result = await _authService.DeleterUserAsync(email);
+            var result = await _authService.DeleteUserAsync(currentUserEmail, email);
             if (!result)
             {
                 return NotFound("User not found");
@@ -151,7 +203,7 @@ namespace BillingPocTwo.Auth.Api.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<ActionResult<TokenResponseDto>> Login(UserDto request)
+        public async Task<ActionResult<TokenResponseDto>> Login(LoginDto request)
         {
             var result = await _authService.LoginAsync(request);
             if (result is null)

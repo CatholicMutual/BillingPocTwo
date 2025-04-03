@@ -1,13 +1,12 @@
 ﻿@page "/change-role"
-@using System.Net.Http.Headers
 @inject HttpClient Http
 @inject NavigationManager Navigation
 @inject ILocalStorageService LocalStorage
 @attribute [Authorize(Roles = "Admin")]
 
-<h3>Change User Role</h3>
+<h3>Modify User Account</h3>
 
-<EditForm Model="changeRoleModel" OnValidSubmit="HandleChangeRole">
+<EditForm Model="changeDetailsModel" OnValidSubmit="HandleChangeRole">
     <DataAnnotationsValidator />
     <ValidationSummary />
 
@@ -18,27 +17,43 @@
     </div>
     @if (isSearchDone)
     {
-    <div>
-        <label>New Roles:</label>
-        @foreach (var role in availableRoles)
-        {
-            <div>
-                <InputCheckbox @bind-Value="role.IsSelected" />
-                <label>@role.Name</label>
-            </div>
-        }
-    </div>
-    <button type="submit" disabled="@isLoading">
-        @if (isLoading)
-        {
-            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-            <span class="sr-only">Loading...</span>
-        }
-        else
-        {
-            <span>Change Role</span>
-        }
-    </button>
+        <div>
+            <label>First Name:</label>
+            <InputText @bind-Value="changeDetailsModel.FirstName" />
+        </div>
+        <div>
+            <label>Last Name:</label>
+            <InputText @bind-Value="changeDetailsModel.LastName" />
+        </div>
+        <div>
+            <label>Active:</label>
+            <InputCheckbox @bind-Value="changeDetailsModel.Active" />
+        </div>
+        <div>
+            <label>Service User:</label>
+            <InputCheckbox @bind-Value="changeDetailsModel.ServiceUser" />
+        </div>
+        <div>
+            <label>New Roles:</label>
+            @foreach (var role in availableRoles)
+            {
+                <div>
+                    <InputCheckbox @bind-Value="role.IsSelected" />
+                    <label>@role.Name</label>
+                </div>
+            }
+        </div>
+        <button type="submit" disabled="@isLoading">
+            @if (isLoading)
+            {
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                <span class="sr-only">Loading...</span>
+            }
+            else
+            {
+                <span>Change Details</span>
+            }
+        </button>
     }
 </EditForm>
 
@@ -46,12 +61,11 @@
 
 @code {
     private string userEmail = string.Empty;
-    private ChangeRoleDto changeRoleModel = new ChangeRoleDto();
+    private ChangeRoleDto changeDetailsModel = new ChangeRoleDto();
     private List<RoleSelection> availableRoles = new List<RoleSelection>();
     private string message = string.Empty;
     private bool isLoading = false;
     private bool isSearchDone = false;
-
 
     private async Task SearchUser()
     {
@@ -76,7 +90,7 @@
                 return;
             }
 
-            // Fetch user roles
+            // Fetch user details
             var request = new HttpRequestMessage(HttpMethod.Get, $"api/auth/user-roles/{userEmail}");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
@@ -86,18 +100,18 @@
                 var result = await response.Content.ReadFromJsonAsync<ChangeRoleDto>();
                 if (result != null)
                 {
-                    changeRoleModel = result;
+                    changeDetailsModel = result;
                     availableRoles = roles.Select(r => new RoleSelection
-                        {
-                            Name = r.Name,
-                            IsSelected = result.NewRoles.Contains(r.Name)
-                        }).ToList();
+                    {
+                        Name = r.Name,
+                        IsSelected = result.NewRoles.Contains(r.Name)
+                    }).ToList();
                     isSearchDone = true;
                 }
             }
             else
             {
-                message = "Failed to load user roles";
+                message = "Failed to load user details";
             }
         }
         else
@@ -117,23 +131,23 @@
             return;
         }
 
-        changeRoleModel.NewRoles = availableRoles.Where(r => r.IsSelected).Select(r => r.Name).ToList();
+        changeDetailsModel.NewRoles = availableRoles.Where(r => r.IsSelected).Select(r => r.Name).ToList();
 
-        var request = new HttpRequestMessage(HttpMethod.Put, "api/auth/change-user-role")
-            {
-                Content = JsonContent.Create(changeRoleModel)
-            };
+        var request = new HttpRequestMessage(HttpMethod.Put, "api/auth/change-user-details")
+        {
+            Content = JsonContent.Create(changeDetailsModel)
+        };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         var response = await Http.SendAsync(request);
         if (response.IsSuccessStatusCode)
         {
-            message = "Role changed successfully";
+            message = "Details changed successfully";
         }
         else
         {
             var responseContent = await response.Content.ReadAsStringAsync();
-            message = $"Failed to change role: {responseContent}";
+            message = $"Failed to change details: {responseContent}";
         }
         isLoading = false;
     }

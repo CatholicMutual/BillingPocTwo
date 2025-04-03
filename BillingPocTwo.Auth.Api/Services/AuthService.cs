@@ -15,7 +15,7 @@ namespace BillingPocTwo.Auth.Api.Services
 {
     public class AuthService(UserDbContext context, IConfiguration configuration) : IAuthService
     {
-        public async Task<TokenResponseDto?> LoginAsync(UserDto request)
+        public async Task<TokenResponseDto?> LoginAsync(LoginDto request)
         {
             var user = await context.Users.Include(u => u.Roles).FirstOrDefaultAsync(u => u.Email == request.Email);
 
@@ -50,31 +50,6 @@ namespace BillingPocTwo.Auth.Api.Services
             return await CreateTokenResponse(user);
         }
 
-        public async Task<User?> RegisterAsync(UserDto request)
-        {
-            if (await context.Users.AnyAsync(u => u.Email.ToUpper() == request.Email.ToUpper()))
-            {
-                return null;
-            }
-
-            var user = new User
-            {
-                Email = request.Email,
-                PasswordHash = new PasswordHasher<User>().HashPassword(null, request.Password)
-            };
-
-            var role = await context.UserRoles.FirstOrDefaultAsync(r => r.Name == "User");
-            if (role != null)
-            {
-                user.Roles.Add(role);
-            }
-
-            context.Users.Add(user);
-            await context.SaveChangesAsync();
-
-            return user;
-        }
-
         public async Task<User?> RegisterAsync(CreateUserDto request, bool changePasswordOnFirstLogin = true)
         {
             if (await context.Users.AnyAsync(u => u.Email.ToUpper() == request.Email.ToUpper()))
@@ -85,8 +60,12 @@ namespace BillingPocTwo.Auth.Api.Services
             var user = new User()
             {
                 Email = request.Email,
+                FirstName = request.FirstName,
+                LastName = request.LastName,
                 PasswordHash = new PasswordHasher<User>().HashPassword(null, request.Password),
-                ChangePasswordOnFirstLogin = changePasswordOnFirstLogin
+                ChangePasswordOnFirstLogin = changePasswordOnFirstLogin,
+                CreatedBy = request.CreatedBy,
+                CreatedAt = DateTime.UtcNow
             };
 
             var roles = await context.UserRoles.Where(r => request.Roles.Contains(r.Name)).ToListAsync();
@@ -98,8 +77,13 @@ namespace BillingPocTwo.Auth.Api.Services
             return user;
         }
 
-        public async Task<bool> ChangeUserRoleAsync(string email, List<string> newRoles)
+        public async Task<bool> ChangeUserRoleAsync(string currentUserEmail, string email, List<string> newRoles)
         {
+            if (currentUserEmail == email)
+            {
+                throw new InvalidOperationException("You cannot modify your own account");
+            }
+
             var user = await context.Users.Include(u => u.Roles).FirstOrDefaultAsync(u => u.Email == email);
             if (user == null)
             {
@@ -113,8 +97,23 @@ namespace BillingPocTwo.Auth.Api.Services
             return true;
         }
 
-        public async Task<bool> DeleterUserAsync(string email)
+        public async Task<bool> UpdateUserAsync(User user, string modifiedBy)
         {
+            user.ModifiedBy = modifiedBy; // Set the modifier
+            user.ModifiedAt = DateTime.UtcNow; // Set the modification time
+
+            context.Users.Update(user);
+            var result = await context.SaveChangesAsync();
+            return result > 0;
+        }
+
+        public async Task<bool> DeleteUserAsync(string currentUserEmail, string email)
+        {
+            if (currentUserEmail == email)
+            {
+                throw new InvalidOperationException("You cannot delete your own account");
+            }
+
             var user = await context.Users.FirstOrDefaultAsync(u => u.Email == email);
             if (user == null)
             {

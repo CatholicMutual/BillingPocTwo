@@ -35,6 +35,8 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
             _userState.IsAdmin = user.IsInRole("Admin");
             _userState.IsUser = user.IsInRole("User");
             _userState.Email = user.FindFirst(ClaimTypes.Email)?.Value;
+            _userState.FirstName = user.FindFirst("firstName")?.Value;
+            _userState.LastName = user.FindFirst("lastName")?.Value;
 
             return new AuthenticationState(user);
         }
@@ -48,6 +50,8 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
             _userState.IsAdmin = user.IsInRole("Admin");
             _userState.IsUser = user.IsInRole("User");
             _userState.Email = user.FindFirst(ClaimTypes.Email)?.Value;
+            _userState.FirstName = user.FindFirst("firstName")?.Value;
+            _userState.LastName = user.FindFirst("lastName")?.Value;
 
             NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(user)));
         }
@@ -60,6 +64,8 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
             _userState.IsAdmin = false;
             _userState.IsUser = false;
             _userState.Email = null;
+            _userState.FirstName = null;
+            _userState.LastName = null;
 
             NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(user)));
         }
