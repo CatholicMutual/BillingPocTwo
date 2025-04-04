@@ -36,9 +36,10 @@
 @code {
     private LoginDto loginModel = new LoginDto();
     private string message = string.Empty;
-    private bool isLoading = false;
+    public bool isLoading = false;
 
-    private async Task HandleLogin()
+    // Change the access modifier to internal or public
+    public async Task HandleLogin()
     {
         isLoading = true;
         var response = await Http.PostAsJsonAsync("api/auth/login", loginModel);
