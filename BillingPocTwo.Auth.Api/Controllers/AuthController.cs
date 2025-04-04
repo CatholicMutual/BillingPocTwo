@@ -15,9 +15,9 @@ namespace BillingPocTwo.Auth.Api.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
-        private readonly UserDbContext _context;
+        private readonly IUserDbContext _context;
 
-        public AuthController(IAuthService authService, UserDbContext context)
+        public AuthController(IAuthService authService, IUserDbContext context)
         {
             _authService = authService;
             _context = context;
@@ -273,6 +273,5 @@ namespace BillingPocTwo.Auth.Api.Controllers
 
             return NoContent();
         }
-
     }
 }

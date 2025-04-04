@@ -3,14 +3,14 @@ using BillingPocTwo.Shared.Entities;
 
 namespace BillingPocTwo.Auth.Api.Data
 {
-    public class UserDbContext : DbContext
+    public class UserDbContext : DbContext, IUserDbContext
     {
         public UserDbContext(DbContextOptions<UserDbContext> options) : base(options)
         {
         }
 
-        public DbSet<User> Users { get; set; }
-        public DbSet<UserRole> UserRoles { get; set; }
+        public virtual DbSet<User> Users { get; set; }
+        public virtual DbSet<UserRole> UserRoles { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

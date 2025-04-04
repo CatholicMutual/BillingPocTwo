@@ -9,9 +9,12 @@ using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-//Configure Database
+// Configure Database
 builder.Services.AddDbContext<UserDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("UserDatabase")));
+
+// Register IUserDbContext
+builder.Services.AddScoped<IUserDbContext>(provider => provider.GetService<UserDbContext>());
 
 // Add services to the container.
 
