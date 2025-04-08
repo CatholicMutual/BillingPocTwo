@@ -94,7 +94,7 @@
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
     private string? AccountMenuCssClass => collapseAccountMenu ? "collapse" : null;
 
-    protected override async Task OnInitializedAsync()
+    public async Task OnInitializedAsync()
     {
         AuthenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
         await UpdateUserState();
@@ -106,7 +106,7 @@
         StateHasChanged();
     }
 
-    private async Task UpdateUserState()
+    public async Task UpdateUserState()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;

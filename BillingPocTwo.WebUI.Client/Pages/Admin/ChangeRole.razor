@@ -57,23 +57,32 @@
     }
 </EditForm>
 
-<p><em>@message</em></p>
+@if (!string.IsNullOrEmpty(message))
+{
+    <em>@message</em>
+}
+
 
 @code {
-    private string userEmail = string.Empty;
+    public string userEmail = string.Empty;
     private ChangeRoleDto changeDetailsModel = new ChangeRoleDto();
     private List<RoleSelection> availableRoles = new List<RoleSelection>();
-    private string message = string.Empty;
-    private bool isLoading = false;
+    public string message = string.Empty;
+    public bool isLoading = false;
     private bool isSearchDone = false;
 
-    private async Task SearchUser()
+    public async Task SearchUser()
     {
         var token = await LocalStorage.GetItemAsync<string>("authToken");
         if (string.IsNullOrEmpty(token))
         {
-            message = "User is not authenticated";
-            return;
+            await InvokeAsync(() =>
+                {
+                    message = "User is not authenticated";
+                    isLoading = false;
+                    StateHasChanged();
+                    return;
+                });
         }
 
         // Load all available roles
@@ -86,8 +95,13 @@
             var roles = await responseRoles.Content.ReadFromJsonAsync<List<UserRole>>();
             if (roles == null)
             {
-                message = "Failed to load user roles";
-                return;
+                await InvokeAsync(() =>
+                {
+                    message = "Failed to load user roles";
+                    isLoading = false;
+                    StateHasChanged();
+                    return;
+                });
             }
 
             // Fetch user details
@@ -111,24 +125,40 @@
             }
             else
             {
+                await InvokeAsync(() =>
+            {
                 message = "Failed to load user details";
+                isLoading = false;
+                StateHasChanged();
+                return;
+            });
             }
         }
         else
         {
-            message = "Failed to load user roles";
+            await InvokeAsync(() =>
+            {
+                message = "Failed to load user roles";
+                isLoading = false;
+                StateHasChanged();
+                return;
+            });
         }
     }
 
-    private async Task HandleChangeRole()
+    public async Task HandleChangeRole()
     {
         isLoading = true;
         var token = await LocalStorage.GetItemAsync<string>("authToken");
         if (string.IsNullOrEmpty(token))
         {
-            message = "User is not authenticated";
-            isLoading = false;
-            return;
+            await InvokeAsync(() =>
+            {
+                message = "User is not authenticated";
+                isLoading = false;
+                StateHasChanged();
+                return;
+            });
         }
 
         changeDetailsModel.NewRoles = availableRoles.Where(r => r.IsSelected).Select(r => r.Name).ToList();
@@ -142,12 +172,22 @@
         var response = await Http.SendAsync(request);
         if (response.IsSuccessStatusCode)
         {
-            message = "Details changed successfully";
+            await InvokeAsync(() =>
+            {
+                message = "Details changed successfully";
+                StateHasChanged();
+            });
+
         }
         else
         {
             var responseContent = await response.Content.ReadAsStringAsync();
-            message = $"Failed to change details: {responseContent}";
+
+            await InvokeAsync(() =>
+            {
+                message = responseContent;
+                StateHasChanged();
+            });
         }
         isLoading = false;
     }

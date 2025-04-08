@@ -36,7 +36,7 @@ else
 
 @code {
     private UserProfileDto userProfile;
-    private string message = string.Empty;
+    public string message = string.Empty;
     private bool isLoading = false;
 
     protected override async Task OnInitializedAsync()
@@ -44,7 +44,7 @@ else
         await LoadUserProfile();
     }
 
-    private async Task LoadUserProfile()
+    public async Task LoadUserProfile()
     {
         isLoading = true;
         var token = await LocalStorage.GetItemAsync<string>("authToken");
@@ -52,17 +52,19 @@ else
         {
             message = "User is not authenticated";
             isLoading = false;
+             StateHasChanged();
             return;
         }
 
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
-        var email = user.FindFirst(c => c.Type == ClaimTypes.Email)?.Value;
+        var email = user.FindFirst(c => c.Type == ClaimTypes.Email || c.Type == "email")?.Value;
 
         if (string.IsNullOrEmpty(email))
         {
             message = "Failed to retrieve user email";
             isLoading = false;
+            StateHasChanged();
             return;
         }
 
@@ -79,5 +81,7 @@ else
             message = "Failed to load user profile";
         }
         isLoading = false;
+        StateHasChanged();
+
     }
 }

@@ -1,6 +1,5 @@
 using Bunit;
-using BillingPocTwo.WebUI.Client.Pages;
-using BillingPocTwo.WebUI.Client.Test.Helpers;
+using BillingPocTwo.WebUI.Client.Pages.Admin;
 using BillingPocTwo.Shared.DataObjects;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -20,18 +19,19 @@ using Bunit.TestDoubles;
 
 namespace BillingPocTwo.WebUI.Client.Test
 {
-    public class LoginTests : TestContext
+    public class ChangeRoleTests : TestContext
     {
         private readonly Mock<ILocalStorageService> _localStorageMock;
         private readonly Mock<AuthenticationStateProvider> _authStateProviderMock;
         private readonly Mock<HttpMessageHandler> _httpMessageHandlerMock;
         private readonly HttpClient _httpClient;
 
-        public LoginTests()
+        public ChangeRoleTests()
         {
             _localStorageMock = new Mock<ILocalStorageService>();
             var userState = new UserState();
             _httpMessageHandlerMock = new Mock<HttpMessageHandler>();
+
             _httpClient = new HttpClient(_httpMessageHandlerMock.Object)
             {
                 BaseAddress = new Uri("https://localhost:7192/")
@@ -39,7 +39,7 @@ namespace BillingPocTwo.WebUI.Client.Test
 
             var customAuthStateProvider = new CustomAuthenticationStateProvider(_localStorageMock.Object, userState, _httpClient);
 
-            Services.AddSingleton(_httpClient);
+            Services.AddSingleton<HttpClient>(_httpClient);
             Services.AddSingleton(_localStorageMock.Object);
             Services.AddSingleton<AuthenticationStateProvider>(customAuthStateProvider);
             Services.AddSingleton(userState);
@@ -52,94 +52,90 @@ namespace BillingPocTwo.WebUI.Client.Test
         }
 
         [Fact]
-        public void Login_ShouldRender()
+        public void ChangeRole_ShouldRender()
         {
             // Arrange
-            var cut = RenderComponent<Login>();
+            var cut = RenderComponent<ChangeRole>();
 
             // Act
-            var loginForm = cut.Find("form");
+            var form = cut.Find("form");
 
             // Assert
-            Assert.NotNull(loginForm);
+            Assert.NotNull(form);
         }
 
         [Fact]
-        public async Task Login_ShouldDisplayErrorMessage_WhenLoginFails()
+        public async Task ChangeRole_ShouldDisplayErrorMessage_WhenUserSearchFails()
         {
             // Arrange
-            var loginDto = new LoginDto { Email = "test@example.com", Password = "wrongpassword" };
-            var responseMessage = new HttpResponseMessage(HttpStatusCode.Unauthorized)
+            var userEmail = "test@example.com";
+            var responseMessage = new HttpResponseMessage(HttpStatusCode.NotFound)
             {
-                Content = new StringContent("Invalid username or password")
+                Content = new StringContent("User not found")
             };
 
+            // Mock the response for loading user roles
             _httpMessageHandlerMock
                 .Protected()
                 .Setup<Task<HttpResponseMessage>>(
                     "SendAsync",
                     ItExpr.Is<HttpRequestMessage>(req =>
-                        req.Method == HttpMethod.Post &&
-                        req.RequestUri == new Uri("https://localhost:7192/api/auth/login")),
+                        req.Method == HttpMethod.Get &&
+                        req.RequestUri == new Uri("https://localhost:7192/api/auth/user-roles")),
                     ItExpr.IsAny<CancellationToken>()
                 )
-                .ReturnsAsync(responseMessage);
+                .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.NotFound)
+                {
+                    Content = new StringContent("Roles not found")
+                });
 
-            var httpClient = new HttpClient(_httpMessageHandlerMock.Object)
-            {
-                BaseAddress = new Uri("https://localhost:7192")
-            };
-
-            var cut = RenderComponent<Login>();
-            cut.Instance.loginModel = loginDto;
+            var cut = RenderComponent<ChangeRole>();
+            cut.Instance.userEmail = userEmail;
 
             // Act
-            await cut.InvokeAsync(() => cut.Instance.HandleLogin());
+            await cut.InvokeAsync(() => cut.Instance.SearchUser());
 
             // Assert
             cut.WaitForState(() => !cut.Instance.isLoading);
             cut.WaitForAssertion(() =>
             {
                 var errorMessage = cut.Find("em").TextContent;
-                Assert.Equal("Invalid username or password", errorMessage);
+                Assert.Equal("Failed to load user roles", errorMessage);
             });
         }
 
         [Fact]
-        public async Task Login_ShouldNavigateToWelcomePage_WhenLoginSucceeds()
+        public async Task ChangeRole_ShouldChangeUserRole_WhenChangeRoleSucceeds()
         {
             // Arrange
-            var cut = RenderComponent<Login>();
-            var loginDto = new LoginDto { Email = "test@example.com", Password = "correctpassword" };
-            var tokenResponse = new TokenResponseDto { AccessToken = GenerateValidJwtToken(), RefreshToken = "validRefreshToken" };
+            var cut = RenderComponent<ChangeRole>();
+            var changeRoleDto = new ChangeRoleDto { Email = "test@example.com", NewRoles = new List<string> { "Admin" } };
             var responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = JsonContent.Create(tokenResponse)
+                Content = JsonContent.Create(changeRoleDto)
             };
 
-            var expectedUri = new Uri("https://localhost:7192/api/auth/login");
+            var expectedUri = new Uri("https://localhost:7192/api/auth/change-user-details");
 
             _httpMessageHandlerMock
                 .Protected()
                 .Setup<Task<HttpResponseMessage>>(
                     "SendAsync",
-                    ItExpr.Is<HttpRequestMessage>(req => req.Method == HttpMethod.Post && req.RequestUri == expectedUri),
+                    ItExpr.Is<HttpRequestMessage>(req => req.Method == HttpMethod.Put && req.RequestUri == expectedUri),
                     ItExpr.IsAny<CancellationToken>()
                 )
                 .ReturnsAsync(responseMessage);
 
             // Act
-            await cut.Instance.HandleLogin();
+            await cut.InvokeAsync(() => cut.Instance.HandleChangeRole());
 
             // Assert
             cut.WaitForState(() => !cut.Instance.isLoading);
-            _localStorageMock.Verify(x => x.SetItemAsync("authToken", tokenResponse.AccessToken, CancellationToken.None), Times.Once);
-            var customAuthStateProvider = Services.GetRequiredService<AuthenticationStateProvider>() as CustomAuthenticationStateProvider;
-            Assert.NotNull(customAuthStateProvider);
-            customAuthStateProvider.NotifyUserAuthentication(tokenResponse.AccessToken);
-            var navigationManager = Services.GetRequiredService<NavigationManager>() as FakeNavigationManager;
-            Assert.NotNull(navigationManager);
-            Assert.Equal("https://localhost:7192/welcome2", navigationManager.Uri);
+            cut.WaitForAssertion(() =>
+            {
+                var successMessage = cut.Find("em").TextContent;
+                Assert.Equal("Details changed successfully", successMessage);
+            });
         }
 
         private string GenerateValidJwtToken()
@@ -150,8 +146,8 @@ namespace BillingPocTwo.WebUI.Client.Test
             {
                 Subject = new ClaimsIdentity(new Claim[]
                 {
-                    new Claim(ClaimTypes.Email, "test@example.com"),
-                    new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString())
+                        new Claim(ClaimTypes.Email, "test@example.com"),
+                        new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString())
                 }),
                 Expires = DateTime.UtcNow.AddMinutes(30),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
@@ -161,3 +157,4 @@ namespace BillingPocTwo.WebUI.Client.Test
         }
     }
 }
+

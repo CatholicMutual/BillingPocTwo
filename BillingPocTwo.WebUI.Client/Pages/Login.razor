@@ -31,11 +31,14 @@
     </button>
 </EditForm>
 
-<p><em>@message</em></p>
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <em>@message</em>
+}
 
 @code {
-    private LoginDto loginModel = new LoginDto();
-    private string message = string.Empty;
+    public LoginDto loginModel = new LoginDto();
+    public string message = string.Empty;
     public bool isLoading = false;
 
     // Change the access modifier to internal or public
@@ -66,7 +69,8 @@
         else
         {
             var errorResponse = await response.Content.ReadAsStringAsync();
-            message = $"{errorResponse}";
+            message = errorResponse;
+            StateHasChanged();
         }
         isLoading = false;
     }

@@ -49,18 +49,18 @@
     </button>
 </EditForm>
 
-<p><em>@message</em></p>
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <em>@message</em>
+}
 
 @code {
-    private CreateUserDto createUserModel = new CreateUserDto();
-    private List<RoleSelection> availableRoles = new List<RoleSelection>();
-    private string message = string.Empty;
+    public CreateUserDto createUserModel = new CreateUserDto();
+    public List<RoleSelection> availableRoles = new List<RoleSelection>();
+    public string message = string.Empty;
     private bool isLoading = false;
 
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadRoles();
-    }
+    protected override async Task OnInitializedAsync() => await LoadRoles();
 
     private async Task LoadRoles()
     {
@@ -89,7 +89,7 @@
         }
     }
 
-    private async Task HandleCreateUser()
+    public async Task HandleCreateUser()
     {
         isLoading = true;
         var token = await LocalStorage.GetItemAsync<string>("authToken");
@@ -120,10 +120,11 @@
             var responseContent = await response.Content.ReadAsStringAsync();
             message = $"Failed to create user: {responseContent}";
         }
+        StateHasChanged();
         isLoading = false;
     }
 
-    private class RoleSelection
+    public class RoleSelection
     {
         public string Name { get; set; }
         public bool IsSelected { get; set; }

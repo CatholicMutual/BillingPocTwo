@@ -31,12 +31,12 @@
 <p><em>@message</em></p>
 
 @code {
-    private DeleteUserDto deleteUserModel = new DeleteUserDto();
-    private string message = string.Empty;
+    public DeleteUserDto deleteUserModel = new DeleteUserDto();
+    public string message = string.Empty;
     private bool isLoading = false;
 
 
-    private async Task HandleDeleteUser()
+    public async Task HandleDeleteUser()
     {
         isLoading = true;
 
@@ -44,6 +44,7 @@
         if (string.IsNullOrEmpty(token))
         {
             message = "User is not authenticated";
+            StateHasChanged();
             return;
         }
 
@@ -51,6 +52,7 @@
         if (currentUserEmail == deleteUserModel.Email)
         {
             message = "You cannot delete your own account";
+            StateHasChanged();
             return;
         }
 
@@ -61,15 +63,14 @@
         if (response.IsSuccessStatusCode)
         {
             message = "User deleted successfully";
+            StateHasChanged();
             isLoading = false;
-            // Thread.Sleep(2000);
-            // Navigation.NavigateTo("/welcome2");
         }
         else
         {
             var responseContent = await response.Content.ReadAsStringAsync();
-            message = $"Failed to delete user: {responseContent}";
-
+            message = responseContent;
+            StateHasChanged();
             isLoading = false;
         }
     }
