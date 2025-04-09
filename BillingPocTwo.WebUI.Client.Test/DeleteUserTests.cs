@@ -16,6 +16,7 @@ using System.Security.Claims;
 using System.Text;
 using BillingPocTwo.Shared.Entities;
 using Bunit.TestDoubles;
+using BillingPocTwo.Shared.Entities.Auth;
 
 namespace BillingPocTwo.WebUI.Client.Test
 {

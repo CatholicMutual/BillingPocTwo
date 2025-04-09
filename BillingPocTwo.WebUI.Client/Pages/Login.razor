@@ -1,8 +1,11 @@
 ﻿@page "/login"
+
+@inject IHttpClientFactory HttpClientFactory
 @inject HttpClient Http
 @inject NavigationManager Navigation
 @inject ILocalStorageService LocalStorage
 @inject AuthenticationStateProvider AuthStateProvider
+@inject UserState UserState
 
 <h3>Login</h3>
 
@@ -45,7 +48,11 @@
     public async Task HandleLogin()
     {
         isLoading = true;
-        var response = await Http.PostAsJsonAsync("api/auth/login", loginModel);
+
+        // Use the named HttpClient
+        var client = HttpClientFactory.CreateClient("AuthApi");
+        var response = await client.PostAsJsonAsync("api/auth/login", loginModel);
+
         if (response.IsSuccessStatusCode)
         {
             var tokenResponse = await response.Content.ReadFromJsonAsync<TokenResponseDto>();
@@ -53,6 +60,18 @@
             {
                 await LocalStorage.SetItemAsync("authToken", tokenResponse.AccessToken);
                 var claims = JwtParser.ParseClaimsFromJwt(tokenResponse.AccessToken);
+
+                // Update UserState directly
+                UserState.IsAuthenticated = true;
+                UserState.Email = claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
+                UserState.FirstName = claims.FirstOrDefault(c => c.Type == "FirstName")?.Value;
+                UserState.LastName = claims.FirstOrDefault(c => c.Type == "LastName")?.Value;
+                UserState.IsAdmin = claims.Any(c => c.Type == ClaimTypes.Role && c.Value == "Admin");
+
+                // Notify AuthenticationStateProvider
+                ((CustomAuthenticationStateProvider)AuthStateProvider).NotifyUserAuthentication(tokenResponse.AccessToken);
+                StateHasChanged();
+
                 var changePasswordClaim = claims.FirstOrDefault(c => c.Type == "ChangePasswordOnFirstLogin")?.Value;
 
                 if (bool.TryParse(changePasswordClaim, out bool changePasswordOnFirstLogin) && changePasswordOnFirstLogin)
@@ -61,7 +80,6 @@
                 }
                 else
                 {
-                    ((CustomAuthenticationStateProvider)AuthStateProvider).NotifyUserAuthentication(tokenResponse.AccessToken);
                     Navigation.NavigateTo("/welcome2");
                 }
             }

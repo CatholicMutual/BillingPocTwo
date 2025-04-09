@@ -1,5 +1,7 @@
 ﻿@page "/user-profile"
+
 @inject HttpClient Http
+@inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager Navigation
 @inject ILocalStorageService LocalStorage
 @inject AuthenticationStateProvider AuthenticationStateProvider
@@ -47,6 +49,7 @@ else
     public async Task LoadUserProfile()
     {
         isLoading = true;
+
         var token = await LocalStorage.GetItemAsync<string>("authToken");
         if (string.IsNullOrEmpty(token))
         {
@@ -68,10 +71,12 @@ else
             return;
         }
 
+        var client = HttpClientFactory.CreateClient("AuthApi");
+
         var request = new HttpRequestMessage(HttpMethod.Get, $"api/auth/user-profile/{email}");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var response = await Http.SendAsync(request);
+        var response = await client.SendAsync(request);
         if (response.IsSuccessStatusCode)
         {
             userProfile = await response.Content.ReadFromJsonAsync<UserProfileDto>();
@@ -82,6 +87,5 @@ else
         }
         isLoading = false;
         StateHasChanged();
-
     }
 }

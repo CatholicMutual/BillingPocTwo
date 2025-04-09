@@ -1,5 +1,5 @@
 ﻿using BillingPocTwo.Shared.DataObjects;
-using BillingPocTwo.Shared.Entities;
+using BillingPocTwo.Shared.Entities.Auth;
 
 namespace BillingPocTwo.Auth.Api.Services
 {

@@ -1,5 +1,7 @@
 ﻿@page "/change-role"
+
 @inject HttpClient Http
+@inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager Navigation
 @inject ILocalStorageService LocalStorage
 @attribute [Authorize(Roles = "Admin")]
@@ -85,11 +87,13 @@
                 });
         }
 
+        var client = HttpClientFactory.CreateClient("AuthApi");
+
         // Load all available roles
         var requestRoles = new HttpRequestMessage(HttpMethod.Get, "api/auth/user-roles");
         requestRoles.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var responseRoles = await Http.SendAsync(requestRoles);
+        var responseRoles = await client.SendAsync(requestRoles);
         if (responseRoles.IsSuccessStatusCode)
         {
             var roles = await responseRoles.Content.ReadFromJsonAsync<List<UserRole>>();
@@ -108,7 +112,7 @@
             var request = new HttpRequestMessage(HttpMethod.Get, $"api/auth/user-roles/{userEmail}");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-            var response = await Http.SendAsync(request);
+            var response = await client.SendAsync(request);
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<ChangeRoleDto>();
@@ -161,6 +165,8 @@
             });
         }
 
+        var client = HttpClientFactory.CreateClient("AuthApi");
+
         changeDetailsModel.NewRoles = availableRoles.Where(r => r.IsSelected).Select(r => r.Name).ToList();
 
         var request = new HttpRequestMessage(HttpMethod.Put, "api/auth/change-user-details")
@@ -169,7 +175,7 @@
         };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var response = await Http.SendAsync(request);
+        var response = await client.SendAsync(request);
         if (response.IsSuccessStatusCode)
         {
             await InvokeAsync(() =>

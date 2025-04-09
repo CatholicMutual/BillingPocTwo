@@ -2,9 +2,9 @@
 using Xunit;
 using BillingPocTwo.WebUI.Client.Layout;
 using BillingPocTwo.WebUI.Client.Test.Helpers;
-using BillingPocTwo.Shared.Entities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Components.Authorization;
+using BillingPocTwo.Shared.Entities.Auth;
 
 namespace BillingPocTwo.WebUI.Client.Test
 {

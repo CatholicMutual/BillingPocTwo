@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Components;
 using Bunit.TestDoubles;
 using BillingPocTwo.Shared.Entities;
 using Blazored.LocalStorage;
+using BillingPocTwo.Shared.Entities.Auth;
 
 namespace BillingPocTwo.WebUI.Client.Test
 {

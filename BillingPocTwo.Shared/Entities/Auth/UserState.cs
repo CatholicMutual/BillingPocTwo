@@ -1,4 +1,4 @@
-﻿namespace BillingPocTwo.Shared.Entities
+﻿namespace BillingPocTwo.Shared.Entities.Auth
 {
     public class UserState
     {

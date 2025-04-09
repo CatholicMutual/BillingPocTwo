@@ -1,6 +1,6 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
-using BillingPocTwo.Shared.Entities;
+using BillingPocTwo.Shared.Entities.Auth;
 using Microsoft.EntityFrameworkCore;
 
 namespace BillingPocTwo.Auth.Api.Data

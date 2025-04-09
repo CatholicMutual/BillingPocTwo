@@ -1,6 +1,6 @@
 ﻿using BillingPocTwo.Auth.Api.Data;
 using BillingPocTwo.Shared.DataObjects;
-using BillingPocTwo.Shared.Entities;
+using BillingPocTwo.Shared.Entities.Auth;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;

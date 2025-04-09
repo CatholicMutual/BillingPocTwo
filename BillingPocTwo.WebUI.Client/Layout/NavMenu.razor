@@ -1,4 +1,5 @@
-﻿@inject AuthenticationStateProvider AuthenticationStateProvider
+﻿@using BillingPocTwo.Shared.Entities.Auth
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @inject UserState UserState
 @inject NavigationManager Navigation
 
@@ -36,6 +37,18 @@
                             <path d="M3.232 1.776A1.5 1.5 0 0 0 2 3.252v10.95c0 .445.191.838.49 1.11.367.422.908.688 1.51.688h8a2 2 0 0 0 2-2V4a2 2 0 0 0-1-1.732v-.47A1.5 1.5 0 0 0 11.232.321l-8 1.454ZM4 3h8a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1" />
                         </svg>
                         <span class="bi bi-key-fill" aria-hidden="true"></span> Change Password
+                    </NavLink>
+                </div>
+            </div>
+
+            <h5 class="px-3" style="color: #cccccc;">Billing Tools:</h5>
+            <div class="nav-item px-3">
+                <button class="btn btn-link nav-link" @onclick="ToggleBillingMenu">
+                    <span class="bi bi-file-earmark-text" aria-hidden="true"></span> Billing
+                </button>
+                <div class="@BillingMenuCssClass">
+                    <NavLink class="nav-link" href="entity-register">
+                        <span class="bi bi-list" aria-hidden="true"></span> Entity Register
                     </NavLink>
                 </div>
             </div>
@@ -90,17 +103,28 @@
 @code {
     private bool collapseNavMenu = true;
     private bool collapseAccountMenu = true;
+    private bool collapseBillingMenu = true;
 
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
     private string? AccountMenuCssClass => collapseAccountMenu ? "collapse" : null;
+    private string? BillingMenuCssClass => collapseBillingMenu ? "collapse" : null;
 
-    public async Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync()
     {
-        AuthenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+        // Reset UserState to default values
+        UserState.IsAuthenticated = false;
+        UserState.IsAdmin = false;
+        UserState.Email = null;
+        UserState.FirstName = null;
+        UserState.LastName = null;
+
+        AuthenticationStateProvider.AuthenticationStateChanged +=
+            async (task) => await OnAuthenticationStateChanged(task);
+
         await UpdateUserState();
     }
 
-    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+    private async Task OnAuthenticationStateChanged(Task<AuthenticationState> task)
     {
         await UpdateUserState();
         StateHasChanged();
@@ -144,6 +168,11 @@
     private void ToggleAccountMenu()
     {
         collapseAccountMenu = !collapseAccountMenu;
+    }
+
+    private void ToggleBillingMenu() 
+    {
+        collapseBillingMenu = !collapseBillingMenu;
     }
 
     private async Task Logout()
