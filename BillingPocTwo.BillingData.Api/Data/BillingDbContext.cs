@@ -11,6 +11,8 @@ namespace BillingPocTwo.BillingData.Api.Data
         // Add DbSet for ENTITY_REGISTER
         public DbSet<ENTITY_REGISTER> EntityRegisters { get; set; }
         public DbSet<ENTITY_ADDRESS_INFO> EntityAddresses { get; set; }
+        public DbSet<POLICY_ENTITY_REGISTER> PolicyEntityIntermediate { get; set; }
+        public DbSet<POLICY_REGISTER> PolicyRegisters { get; set; } 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -24,6 +26,14 @@ namespace BillingPocTwo.BillingData.Api.Data
             modelBuilder.Entity<ENTITY_ADDRESS_INFO>()
                 .ToTable("ENTITY_ADDRESS_INFO")
                 .HasKey(e => e.SEQ_ENTITY_ADDRESS_INFO);
+
+            modelBuilder.Entity<POLICY_ENTITY_REGISTER>()
+                .ToTable("POLICY_ENTITY_REGISTER")
+                .HasKey(e => new { e.POLICY_TERM_ID, e.ENTITY_TYPE, e.SYSTEM_ENTITY_CODE, e.SYSTEM_ACTIVITY_NO, e.SYSTEM_TRANSACTION_SEQ });
+
+            modelBuilder.Entity<POLICY_REGISTER>()
+                .ToTable("POLICY_REGISTER")
+                .HasKey(e => e.POLICY_TERM_ID);
         }
 
         void IBillingDbContext.OnModelCreating(ModelBuilder modelBuilder)

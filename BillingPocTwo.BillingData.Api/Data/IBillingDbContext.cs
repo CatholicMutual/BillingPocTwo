@@ -8,6 +8,8 @@ namespace BillingPocTwo.BillingData.Api.Data
     {
         DbSet<ENTITY_REGISTER> EntityRegisters { get; set; }
         DbSet<ENTITY_ADDRESS_INFO> EntityAddresses { get; set; }
+        DbSet<POLICY_ENTITY_REGISTER> PolicyEntityIntermediate { get; set; }
+        DbSet<POLICY_REGISTER> PolicyRegisters { get; set; }
 
         void OnModelCreating(ModelBuilder modelBuilder);
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

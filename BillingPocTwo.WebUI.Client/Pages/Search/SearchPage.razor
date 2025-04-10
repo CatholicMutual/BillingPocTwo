@@ -1,0 +1,71 @@
+﻿@page "/search"
+
+@inject HttpClient Http
+@inject IHttpClientFactory HttpClientFactory
+@using BillingPocTwo.Shared.Entities.Billing
+
+<h3>Search</h3>
+
+<div class="form-group">
+    <label for="searchTerm">Account Number:</label>
+    <input type="text" id="searchTerm" class="form-control" @bind="SearchTerm" placeholder="Ex: 0084-0000" />
+</div>
+
+<button class="btn btn-primary" @onclick="PerformSearch">Search</button>
+
+@if (IsLoading)
+{
+    <p>Loading...</p>
+}
+else if (EntityDetails != null)
+{
+    <div class="panel panel-default mt-4">
+        <div class="panel-heading">
+            <h4>Entity Details</h4>
+        </div>
+        <div class="panel-body">
+            <p><strong>SYSTEM ENTITY CODE:</strong> @EntityDetails.SYSTEM_ENTITY_CODE</p>
+            <p><strong>FULL NAME:</strong> @EntityDetails.FULL_NAME</p>
+            <p><strong>CITY:</strong> @EntityDetails.CITY</p>
+            <p><strong>STATE:</strong> @EntityDetails.STATE</p>
+            <p><strong>POLICY IDs:</strong></p>
+            <ul>
+                @foreach (var policyTermId in EntityDetails.PolicyTermIds)
+                {
+                    <li>@policyTermId</li>
+                }
+            </ul>
+        </div>
+    </div>
+}
+else if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <p class="text-danger">@ErrorMessage</p>
+}
+
+@code {
+    private string SearchTerm = string.Empty;
+    private bool IsLoading = false;
+    private EntityDetailsDto? EntityDetails = null;
+    private string? ErrorMessage = null;
+
+    private async Task PerformSearch()
+    {
+        IsLoading = true;
+        ErrorMessage = null;
+        EntityDetails = null;
+
+        var client = HttpClientFactory.CreateClient("BillingDataApi");
+
+        try
+        {
+            EntityDetails = await client.GetFromJsonAsync<EntityDetailsDto>($"api/EntityRegister/details/{SearchTerm}");
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+
+        IsLoading = false;
+    }
+}
