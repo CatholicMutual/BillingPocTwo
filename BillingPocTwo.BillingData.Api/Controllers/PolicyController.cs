@@ -47,5 +47,38 @@ namespace BillingPocTwo.BillingData.Api.Controllers
 
             return Ok(policies);
         }
+
+        [HttpGet("details/{sourceSystemEntityCode}/{policyTermId}")]
+        public async Task<IActionResult> GetPolicyDetails(string sourceSystemEntityCode, decimal policyTermId)
+        {
+            // Step 1: Find the SYSTEM_ENTITY_CODE associated with the SOURCE_SYSTEM_ENTITY_CODE
+            var entityRegister = await _context.EntityRegisters
+                .FirstOrDefaultAsync(e => e.SOURCE_SYSTEM_ENTITY_CODE == sourceSystemEntityCode);
+
+            if (entityRegister == null)
+            {
+                return NotFound($"No ENTITY_REGISTER found for SOURCE_SYSTEM_ENTITY_CODE: {sourceSystemEntityCode}");
+            }
+
+            // Step 2: Validate that the POLICY_TERM_ID belongs to the SYSTEM_ENTITY_CODE
+            var isValidPolicy = await _context.PolicyEntityIntermediate
+                .AnyAsync(pe => pe.POLICY_TERM_ID == policyTermId && pe.SYSTEM_ENTITY_CODE == entityRegister.SYSTEM_ENTITY_CODE);
+
+            if (!isValidPolicy)
+            {
+                return BadRequest($"The POLICY_TERM_ID: {policyTermId} does not belong to the SYSTEM_ENTITY_CODE associated with the SOURCE_SYSTEM_ENTITY_CODE: {sourceSystemEntityCode}");
+            }
+
+            // Step 3: Fetch the policy details
+            var policy = await _context.PolicyRegisters
+                .FirstOrDefaultAsync(p => p.POLICY_TERM_ID == policyTermId);
+
+            if (policy == null)
+            {
+                return NotFound($"No policy found for POLICY_TERM_ID: {policyTermId}");
+            }
+
+            return Ok(policy);
+        }
     }
 }

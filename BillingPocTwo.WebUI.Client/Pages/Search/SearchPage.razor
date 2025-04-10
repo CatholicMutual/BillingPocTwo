@@ -2,13 +2,12 @@
 
 @inject HttpClient Http
 @inject IHttpClientFactory HttpClientFactory
-@using BillingPocTwo.Shared.Entities.Billing
 
 <h3>Search</h3>
 
 <div class="form-group">
     <label for="searchTerm">Account Number:</label>
-    <input type="text" id="searchTerm" class="form-control" @bind="SearchTerm" placeholder="Ex: 0084-0000" />
+    <input type="text" id="searchTerm" class="form-control" @bind="SearchTerm" @oninput="OnSearchTermChanged" placeholder="Ex: 0084-0000" />
 </div>
 
 <button class="btn btn-primary" @onclick="PerformSearch">Search</button>
@@ -32,11 +31,30 @@ else if (EntityDetails != null)
             <ul>
                 @foreach (var policyTermId in EntityDetails.PolicyTermIds)
                 {
-                    <li>@policyTermId</li>
+                    <li>
+                        <a href="javascript:void(0)" @onclick="() => ShowPolicyDetails(policyTermId, SearchTerm)">@policyTermId</a>
+                    </li>
                 }
             </ul>
         </div>
     </div>
+
+    <Modal IsVisible="@IsModalVisible" OnClose="CloseModal">
+        @if (SelectedPolicy != null)
+        {
+            <div>
+                <h5>Policy Details</h5>
+                <p><strong>Policy Number:</strong> @SelectedPolicy.POLICY_NO</p>
+                <p><strong>Effective Date:</strong> @SelectedPolicy.POLICY_EFFECTIVE_DATE</p>
+                <p><strong>Expiration Date:</strong> @SelectedPolicy.POLICY_EXPIRATION_DATE</p>
+                <p><strong>Balance:</strong> @SelectedPolicy.BALANCE</p>
+            </div>
+        }
+        else
+        {
+            <p>Loading policy details...</p>
+        }
+    </Modal>
 }
 else if (!string.IsNullOrEmpty(ErrorMessage))
 {
@@ -48,6 +66,9 @@ else if (!string.IsNullOrEmpty(ErrorMessage))
     private bool IsLoading = false;
     private EntityDetailsDto? EntityDetails = null;
     private string? ErrorMessage = null;
+    private POLICY_REGISTER? SelectedPolicy = null;
+    private bool IsModalVisible = false;
+
 
     private async Task PerformSearch()
     {
@@ -67,5 +88,36 @@ else if (!string.IsNullOrEmpty(ErrorMessage))
         }
 
         IsLoading = false;
+    }
+
+    private async Task ShowPolicyDetails(decimal policyTermId, string sourceSystemEntityCode)
+    {
+        SelectedPolicy = null;
+        IsModalVisible = true;
+
+        var client = HttpClientFactory.CreateClient("BillingDataApi");
+
+        try
+        {
+            SelectedPolicy = await client.GetFromJsonAsync<POLICY_REGISTER>($"api/Policy/details/{sourceSystemEntityCode}/{policyTermId}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+    }
+
+    private void OnSearchTermChanged(ChangeEventArgs e)
+    {
+        // Clear EntityDetails when the search term changes
+        if (e.Value is string newValue && newValue != SearchTerm)
+        {
+            EntityDetails = null;
+        }
+    }
+
+    private void CloseModal()
+    {
+        IsModalVisible = false;
     }
 }
