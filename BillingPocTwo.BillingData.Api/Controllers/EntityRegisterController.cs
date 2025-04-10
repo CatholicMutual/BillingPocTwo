@@ -29,10 +29,46 @@ namespace BillingPocTwo.BillingData.Api.Controllers
 
         // Route: GET api/EntityRegister/paged
         [HttpGet("paged")]
-        public async Task<IActionResult> GetEntityRegistersPaged(int page = 1, int pageSize = 10)
+        public async Task<IActionResult> GetEntityRegistersPaged(
+        int page = 1,
+        int pageSize = 10,
+        string? searchTerm = null,
+        string? entityCode = null,
+        decimal? minBalance = null,
+        decimal? maxBalance = null,
+        string? sortColumn = null,
+        string? sortDirection = "asc")
         {
             var query = _context.EntityRegisters
                 .Where(e => e.ENTITY_TYPE == "ACCOUNT");
+
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                query = query.Where(e => e.DOING_BUSINESS_AS_NAME.Contains(searchTerm));
+            }
+
+            if (!string.IsNullOrEmpty(entityCode))
+            {
+                query = query.Where(e => e.SOURCE_SYSTEM_ENTITY_CODE.Contains(entityCode));
+            }
+
+            if (minBalance.HasValue)
+            {
+                query = query.Where(e => e.BALANCE >= minBalance.Value);
+            }
+
+            if (maxBalance.HasValue)
+            {
+                query = query.Where(e => e.BALANCE <= maxBalance.Value);
+            }
+
+            // Apply sorting
+            if (!string.IsNullOrEmpty(sortColumn))
+            {
+                query = sortDirection == "asc"
+                    ? query.OrderBy(e => EF.Property<object>(e, sortColumn))
+                    : query.OrderByDescending(e => EF.Property<object>(e, sortColumn));
+            }
 
             var totalItems = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
@@ -42,13 +78,7 @@ namespace BillingPocTwo.BillingData.Api.Controllers
                 .Take(pageSize)
                 .ToListAsync();
 
-            var response = new
-            {
-                Items = items,
-                TotalPages = totalPages
-            };
-
-            return Ok(response);
+            return Ok(new { Items = items, TotalPages = totalPages });
         }
     }
 }

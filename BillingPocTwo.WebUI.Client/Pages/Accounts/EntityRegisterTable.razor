@@ -3,28 +3,49 @@
 
 <h3>Entity Register</h3>
 
+<div class="filter-bar-horizontal">
+    <input type="text" placeholder="Search by Name" @bind="SearchTerm" class="form-control" />
+    <input type="text" placeholder="Search by Account" @bind="EntityCode" class="form-control" />
+    <input type="number" placeholder="Min Balance" @bind="MinBalance" class="form-control" />
+    <input type="number" placeholder="Max Balance" @bind="MaxBalance" class="form-control" />
+    <button class="btn btn-primary" @onclick="ApplyFilters">Apply Filters</button>
+    <button class="btn btn-secondary" @onclick="ResetFilters">Reset</button>
+</div>
+
 @if (entityRegisters == null)
 {
     <p>Loading...</p>
 }
 else
 {
-    <table class="table table-striped">
+    <table class="table table-striped fixed-table">
         <thead>
             <tr>
-                <th>System Entity Code</th>
-                <th>Entity Type</th>
-                <th>Source System Entity Code</th>
-                <th>Balance</th>
+                <th @onclick="@(() => SortTable("DOING_BUSINESS_AS_NAME"))">
+                    Name @GetSortIcon("DOING_BUSINESS_AS_NAME")
+                </th>
+                <th @onclick="@(() => SortTable("ENTITY_TYPE"))">
+                    Entity Type @GetSortIcon("ENTITY_TYPE")
+                </th>
+                <th @onclick="@(() => SortTable("SOURCE_SYSTEM_ENTITY_CODE"))">
+                    Account Number @GetSortIcon("SOURCE_SYSTEM_ENTITY_CODE")
+                </th>
+                <th @onclick="@(() => SortTable("BALANCE"))">
+                    Balance @GetSortIcon("BALANCE")
+                </th>
             </tr>
         </thead>
         <tbody>
             @foreach (var item in entityRegisters)
             {
                 <tr>
-                    <td>@item.SYSTEM_ENTITY_CODE</td>
+                    <td>@item.DOING_BUSINESS_AS_NAME</td>
                     <td>@item.ENTITY_TYPE</td>
-                    <td>@item.SOURCE_SYSTEM_ENTITY_CODE</td>
+                    <td>
+                        <a href="#" @onclick="() => ShowEntityDetails(item.SYSTEM_ENTITY_CODE)" @onclick:preventDefault>
+                            @item.SOURCE_SYSTEM_ENTITY_CODE
+                        </a>
+                    </td>
                     <td>@item.BALANCE</td>
                 </tr>
             }
@@ -36,28 +57,123 @@ else
         <span>Page @currentPage of @totalPages</span>
         <button class="btn btn-primary" @onclick="NextPage" disabled="@(!CanGoToNextPage)">Next</button>
     </div>
+
+    <Modal IsVisible="IsModalVisible" OnClose="CloseModal">
+        @if (SelectedEntityAddress != null)
+        {
+            <h4>Entity Address Details</h4>
+            <p><strong>System Entity Code:</strong> @SelectedEntityAddress.SYSTEM_ENTITY_CODE</p>
+            <p><strong>Address Type:</strong> @SelectedEntityAddress.ADDRESS_TYPE</p>
+            <p><strong>Address 1:</strong> @SelectedEntityAddress.ADDRESS1</p>
+            <p><strong>Address 2:</strong> @SelectedEntityAddress.ADDRESS2</p>
+            <p><strong>City:</strong> @SelectedEntityAddress.CITY</p>
+            <p><strong>State:</strong> @SelectedEntityAddress.STATE</p>
+            <p><strong>ZIP Code:</strong> @SelectedEntityAddress.ZIP_CODE</p>
+            <p><strong>Full Name:</strong> @SelectedEntityAddress.FULL_NAME</p>
+        }
+    </Modal>
 }
 
 @code {
+    [Parameter]
+    public string SearchTerm { get; set; } = string.Empty;
+
+    [Parameter]
+    public string EntityCode { get; set; } = string.Empty;
+
+    [Parameter]
+    public decimal? MinBalance { get; set; }
+
+    [Parameter]
+    public decimal? MaxBalance { get; set; }
+
     private List<ENTITY_REGISTER> entityRegisters;
+    private List<ENTITY_ADDRESS_INFO> entityAddressInfoList = new List<ENTITY_ADDRESS_INFO>();
     private int currentPage = 1;
     private int pageSize = 10;
     private int totalPages;
+    private bool CanGoToPreviousPage => currentPage > 1;
+    private bool CanGoToNextPage => currentPage < totalPages;
+    private string CurrentSortColumn { get; set; } = "DOING_BUSINESS_AS_NAME"; // Default sort column
+    private bool IsSortAscending { get; set; } = true; // Default sort direction
+    private bool IsModalVisible { get; set; } = false;
+    private ENTITY_ADDRESS_INFO SelectedEntityAddress { get; set; }
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
+        // Reload data whenever the filter parameters change
         await LoadData();
     }
 
     private async Task LoadData()
     {
         var client = HttpClientFactory.CreateClient("BillingDataApi");
-        var response = await client.GetFromJsonAsync<PaginatedResponse<ENTITY_REGISTER>>($"api/EntityRegister/paged?page={currentPage}&pageSize={pageSize}");
-        if (response != null)
+
+        // Query for accounts with sorting parameters
+        var accountQuery = $"api/EntityRegister/paged?page={currentPage}&pageSize={pageSize}&searchTerm={SearchTerm}&entityCode={EntityCode}&sortColumn={CurrentSortColumn}&sortDirection={(IsSortAscending ? "asc" : "desc")}";
+
+        if (MinBalance.HasValue)
+            accountQuery += $"&minBalance={MinBalance}";
+        if (MaxBalance.HasValue)
+            accountQuery += $"&maxBalance={MaxBalance}";
+
+        // Fetch sorted ENTITY_REGISTER data
+        var accountResponse = await client.GetFromJsonAsync<PaginatedResponse<ENTITY_REGISTER>>(accountQuery);
+
+        if (accountResponse != null)
         {
-            entityRegisters = response.Items;
-            totalPages = response.TotalPages;
+            entityRegisters = accountResponse.Items;
+            totalPages = accountResponse.TotalPages;
+
+            // Set default value for BALANCE if it is null
+            foreach (var entity in entityRegisters)
+            {
+                if (!entity.BALANCE.HasValue)
+                {
+                    entity.BALANCE = 0.00m; // Default to 0.00
+                }
+            }
+
+            // Extract SYSTEM_ENTITY_CODE values
+            var systemEntityCodes = entityRegisters.Select(e => e.SYSTEM_ENTITY_CODE).ToList();
+
+            // Query for FULL_NAME values in batch
+            if (systemEntityCodes.Any())
+            {
+                var addressResponse = await client.PostAsJsonAsync("api/EntityAddress/batch", systemEntityCodes);
+                if (addressResponse.IsSuccessStatusCode)
+                {
+                    var addressData = await addressResponse.Content.ReadFromJsonAsync<List<ENTITY_ADDRESS_INFO>>();
+
+                    // Map FULL_NAME to the corresponding entity
+                    foreach (var entity in entityRegisters)
+                    {
+                        var address = addressData?.FirstOrDefault(a => a.SYSTEM_ENTITY_CODE == entity.SYSTEM_ENTITY_CODE);
+                        if (address != null)
+                        {
+                            entity.DOING_BUSINESS_AS_NAME = address.FULL_NAME;
+                        }
+                    }
+                }
+            }
         }
+    }
+
+
+    private async Task ApplyFilters()
+    {
+        currentPage = 1; // Reset to the first page
+        await LoadData();
+    }
+
+    private async Task ResetFilters()
+    {
+        SearchTerm = string.Empty;
+        EntityCode = string.Empty;
+        MinBalance = null;
+        MaxBalance = null;
+        currentPage = 1; // Reset to the first page
+        await LoadData();
     }
 
     private async Task PreviousPage()
@@ -78,12 +194,72 @@ else
         }
     }
 
-    private bool CanGoToPreviousPage => currentPage > 1;
-    private bool CanGoToNextPage => currentPage < totalPages;
-
     public class PaginatedResponse<T>
     {
         public List<T> Items { get; set; }
         public int TotalPages { get; set; }
+    }
+
+    private async Task SortTable(string columnName)
+    {
+        if (CurrentSortColumn == columnName)
+        {
+            // Toggle sort direction if the same column is clicked
+            IsSortAscending = !IsSortAscending;
+        }
+        else
+        {
+            // Set new column and default to ascending
+            CurrentSortColumn = columnName;
+            IsSortAscending = true;
+        }
+
+        // Reload data with new sorting
+        await LoadData();
+    }
+
+    private void SortEntityRegisters()
+    {
+        if (IsSortAscending)
+        {
+            entityRegisters = entityRegisters.OrderBy(e => GetPropertyValue(e, CurrentSortColumn)).ToList();
+        }
+        else
+        {
+            entityRegisters = entityRegisters.OrderByDescending(e => GetPropertyValue(e, CurrentSortColumn)).ToList();
+        }
+    }
+
+    private object GetPropertyValue(ENTITY_REGISTER entity, string propertyName)
+    {
+        return typeof(ENTITY_REGISTER).GetProperty(propertyName)?.GetValue(entity, null);
+    }
+
+    private string GetSortIcon(string columnName)
+    {
+        if (CurrentSortColumn != columnName)
+        {
+            return string.Empty; // No icon for unsorted columns
+        }
+
+        return IsSortAscending ? "↑" : "↓";
+    }
+
+    private async Task ShowEntityDetails(decimal systemEntityCode)
+    {
+        var client = HttpClientFactory.CreateClient("BillingDataApi");
+        var response = await client.GetFromJsonAsync<ENTITY_ADDRESS_INFO>($"api/EntityAddress/{systemEntityCode}");
+
+        if (response != null)
+        {
+            SelectedEntityAddress = response;
+            IsModalVisible = true;
+        }
+    }
+
+    private void CloseModal()
+    {
+        IsModalVisible = false;
+        SelectedEntityAddress = null;
     }
 }

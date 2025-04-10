@@ -10,6 +10,7 @@ namespace BillingPocTwo.BillingData.Api.Data
 
         // Add DbSet for ENTITY_REGISTER
         public DbSet<ENTITY_REGISTER> EntityRegisters { get; set; }
+        public DbSet<ENTITY_ADDRESS_INFO> EntityAddresses { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -19,6 +20,10 @@ namespace BillingPocTwo.BillingData.Api.Data
             modelBuilder.Entity<ENTITY_REGISTER>()
                 .ToTable("ENTITY_REGISTER")
                 .HasKey(e => e.SYSTEM_ENTITY_CODE);
+
+            modelBuilder.Entity<ENTITY_ADDRESS_INFO>()
+                .ToTable("ENTITY_ADDRESS_INFO")
+                .HasKey(e => e.SEQ_ENTITY_ADDRESS_INFO);
         }
 
         void IBillingDbContext.OnModelCreating(ModelBuilder modelBuilder)

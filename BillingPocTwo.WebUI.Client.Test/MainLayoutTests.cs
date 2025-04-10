@@ -17,10 +17,12 @@ namespace BillingPocTwo.WebUI.Client.Test
     {
         private readonly Mock<AuthenticationStateProvider> _authStateProviderMock;
         private readonly Mock<IJSRuntime> _jsRuntimeMock;
+        private readonly Mock<IHttpClientFactory> _httpClientFactoryMock; // Added this field
 
         public MainLayoutTests()
         {
             _jsRuntimeMock = new Mock<IJSRuntime>();
+            _httpClientFactoryMock = new Mock<IHttpClientFactory>(); // Initialize the mock
 
             var userState = new UserState
             {
@@ -35,7 +37,16 @@ namespace BillingPocTwo.WebUI.Client.Test
                 BaseAddress = new Uri("https://localhost:7192/")
             };
 
-            var customAuthStateProvider = new CustomAuthenticationStateProvider(localStorageMock.Object, userState, httpClient);
+            _httpClientFactoryMock
+                .Setup(factory => factory.CreateClient(It.IsAny<string>()))
+                .Returns(httpClient); // Setup the mock behavior
+
+            var customAuthStateProvider = new CustomAuthenticationStateProvider(
+                _httpClientFactoryMock.Object, // Use the initialized mock
+                localStorageMock.Object,
+                userState,
+                httpClient
+            );
 
             Services.AddSingleton<AuthenticationStateProvider>(customAuthStateProvider); // Register the real instance
             Services.AddSingleton(_jsRuntimeMock.Object);
@@ -89,7 +100,12 @@ namespace BillingPocTwo.WebUI.Client.Test
                 BaseAddress = new Uri("https://localhost:7192/")
             };
 
-            var customAuthStateProvider = new CustomAuthenticationStateProvider(localStorageMock.Object, userState, httpClient);
+            var customAuthStateProvider = new CustomAuthenticationStateProvider(
+                _httpClientFactoryMock.Object, // Use the initialized mock
+                localStorageMock.Object,
+                userState,
+                httpClient
+            );
 
             // Override any previously registered AuthenticationStateProvider
             Services.AddSingleton<AuthenticationStateProvider>(customAuthStateProvider);

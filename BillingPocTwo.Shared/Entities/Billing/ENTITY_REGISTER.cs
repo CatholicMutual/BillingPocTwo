@@ -11,6 +11,7 @@ namespace BillingPocTwo.Shared.Entities.Billing
     {
         [Key]
         public decimal SYSTEM_ENTITY_CODE { get; set; }
+        public string? DOING_BUSINESS_AS_NAME { get; set; }
         public string ENTITY_TYPE { get; set; }
         public string? SOURCE_SYSTEM_ENTITY_CODE { get; set; }
         public decimal? BALANCE { get; set; }

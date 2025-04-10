@@ -38,7 +38,18 @@ namespace BillingPocTwo.WebUI.Client.Test
                 BaseAddress = new Uri("https://localhost:7192/")
             };
 
-            var customAuthStateProvider = new CustomAuthenticationStateProvider(_localStorageMock.Object, userState, _httpClient);
+            // Create an IHttpClientFactory mock to satisfy the constructor requirement
+            var httpClientFactoryMock = new Mock<IHttpClientFactory>();
+            httpClientFactoryMock
+                .Setup(factory => factory.CreateClient(It.IsAny<string>()))
+                .Returns(_httpClient);
+
+            var customAuthStateProvider = new CustomAuthenticationStateProvider(
+                httpClientFactoryMock.Object, // Pass the mocked IHttpClientFactory
+                _localStorageMock.Object,
+                userState,
+                _httpClient
+            );
 
             Services.AddSingleton(_httpClient);
             Services.AddSingleton(_localStorageMock.Object);
