@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BillingPocTwo.WebUI.Client.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BillingPocTwo.BillingData.Api", "BillingPocTwo.BillingData.Api\BillingPocTwo.BillingData.Api.csproj", "{A6C8AFCC-D4AA-4A53-9D6F-37A6D486CF4E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BillingTwoPoc.BillingData.Api.Test", "BillingTwoPoc.BillingData.Api.Test\BillingTwoPoc.BillingData.Api.Test.csproj", "{1ED54DF6-C92A-479D-9048-1EFA27878BE2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -45,6 +47,10 @@ Global
 		{A6C8AFCC-D4AA-4A53-9D6F-37A6D486CF4E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A6C8AFCC-D4AA-4A53-9D6F-37A6D486CF4E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A6C8AFCC-D4AA-4A53-9D6F-37A6D486CF4E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1ED54DF6-C92A-479D-9048-1EFA27878BE2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1ED54DF6-C92A-479D-9048-1EFA27878BE2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1ED54DF6-C92A-479D-9048-1EFA27878BE2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1ED54DF6-C92A-479D-9048-1EFA27878BE2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
