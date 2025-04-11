@@ -43,6 +43,7 @@ namespace BillingPocTwo.WebUI.Client.Test
             var customAuthStateProvider = new CustomAuthenticationStateProvider(httpClientFactoryMock.Object, _localStorageMock.Object, userState, _httpClient);
 
             Services.AddSingleton<HttpClient>(_httpClient);
+            Services.AddSingleton<IHttpClientFactory>(httpClientFactoryMock.Object);
             Services.AddSingleton(_localStorageMock.Object);
             Services.AddSingleton<AuthenticationStateProvider>(customAuthStateProvider);
             Services.AddSingleton(userState);
@@ -50,6 +51,29 @@ namespace BillingPocTwo.WebUI.Client.Test
 
             var fakeNavigationManager = new FakeNavigationManager(this);
             Services.AddSingleton<NavigationManager>(fakeNavigationManager);
+        }
+
+        private static HttpClient CreateMockHttpClient()
+        {
+            var handlerMock = new Mock<HttpMessageHandler>();
+
+            handlerMock
+                .Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>()
+                )
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = new StringContent("{}") // Simulate a successful response
+                });
+
+            return new HttpClient(handlerMock.Object)
+            {
+                BaseAddress = new Uri("https://localhost:7192/")
+            };
         }
 
         [Fact]

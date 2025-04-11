@@ -10,6 +10,11 @@ namespace BillingPocTwo.WebUI.Client.Services
     {
         public static IEnumerable<Claim> ParseClaimsFromJwt(string jwt)
         {
+            if (string.IsNullOrWhiteSpace(jwt))
+            {
+                throw new ArgumentException("JWT token cannot be null or empty.", nameof(jwt));
+            }
+
             var claims = new List<Claim>();
 
             try
@@ -24,17 +29,22 @@ namespace BillingPocTwo.WebUI.Client.Services
                 var jsonBytes = ParseBase64WithoutPadding(payload);
                 var keyValuePairs = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonBytes);
 
-                keyValuePairs.TryGetValue(ClaimTypes.Role, out object roles);
+                if (keyValuePairs == null)
+                {
+                    throw new InvalidOperationException("JWT payload is empty or invalid.");
+                }
 
-                if (roles != null)
+                if (keyValuePairs.TryGetValue(ClaimTypes.Role, out object roles) && roles != null)
                 {
                     if (roles.ToString().Trim().StartsWith("["))
                     {
                         var parsedRoles = JsonSerializer.Deserialize<string[]>(roles.ToString());
-
-                        foreach (var parsedRole in parsedRoles)
+                        if (parsedRoles != null)
                         {
-                            claims.Add(new Claim(ClaimTypes.Role, parsedRole));
+                            foreach (var parsedRole in parsedRoles)
+                            {
+                                claims.Add(new Claim(ClaimTypes.Role, parsedRole));
+                            }
                         }
                     }
                     else
@@ -45,7 +55,9 @@ namespace BillingPocTwo.WebUI.Client.Services
                     keyValuePairs.Remove(ClaimTypes.Role);
                 }
 
-                claims.AddRange(keyValuePairs.Select(kvp => new Claim(kvp.Key, kvp.Value.ToString())));
+                claims.AddRange(keyValuePairs
+                    .Where(kvp => kvp.Value != null)
+                    .Select(kvp => new Claim(kvp.Key, kvp.Value.ToString())));
             }
             catch (Exception ex)
             {

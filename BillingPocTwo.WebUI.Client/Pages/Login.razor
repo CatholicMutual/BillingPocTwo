@@ -48,6 +48,7 @@
     public async Task HandleLogin()
     {
         isLoading = true;
+        message = null;
 
         // Use the named HttpClient
         var client = HttpClientFactory.CreateClient("AuthApi");
@@ -56,6 +57,12 @@
         if (response.IsSuccessStatusCode)
         {
             var tokenResponse = await response.Content.ReadFromJsonAsync<TokenResponseDto>();
+
+            if (string.IsNullOrWhiteSpace(tokenResponse?.AccessToken))
+            {
+                throw new InvalidOperationException("Access token is null or empty.");
+            }
+
             if (tokenResponse != null)
             {
                 await LocalStorage.SetItemAsync("authToken", tokenResponse.AccessToken);

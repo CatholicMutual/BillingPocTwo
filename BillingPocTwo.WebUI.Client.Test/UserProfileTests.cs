@@ -51,6 +51,7 @@ namespace BillingPocTwo.WebUI.Client.Test
             }, "mock"));
 
             Services.AddSingleton<HttpClient>(_httpClient);
+            Services.AddSingleton<IHttpClientFactory>(httpClientFactoryMock.Object);
             Services.AddSingleton(_localStorageMock.Object);
             Services.AddSingleton<AuthenticationStateProvider>(customAuthStateProvider);
             Services.AddSingleton(userState);

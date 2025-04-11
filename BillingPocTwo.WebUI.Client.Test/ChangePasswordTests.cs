@@ -13,6 +13,9 @@ using Bunit.TestDoubles;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
+using BillingPocTwo.Shared.Entities.Auth;
+using BillingPocTwo.WebUI.Client.Services;
+using Microsoft.AspNetCore.Components.Authorization;
 
 namespace BillingPocTwo.WebUI.Client.Test
 {
@@ -27,13 +30,28 @@ namespace BillingPocTwo.WebUI.Client.Test
             _localStorageMock = new Mock<ILocalStorageService>();
             _httpMessageHandlerMock = new Mock<HttpMessageHandler>();
 
+            // ? Create HttpClient using the already initialized _httpMessageHandlerMock
             _httpClient = new HttpClient(_httpMessageHandlerMock.Object)
             {
                 BaseAddress = new Uri("https://localhost:7192/")
             };
 
-            Services.AddSingleton(_httpClient);
+            var userState = new UserState();
+            var httpClientFactoryMock = new Mock<IHttpClientFactory>();
+            httpClientFactoryMock.Setup(factory => factory.CreateClient(It.IsAny<string>()))
+                                 .Returns(_httpClient);
+
+            var customAuthStateProvider = new CustomAuthenticationStateProvider(
+                httpClientFactoryMock.Object,
+                _localStorageMock.Object,
+                userState,
+                _httpClient);
+
+            Services.AddSingleton<HttpClient>(_httpClient);
+            Services.AddSingleton<IHttpClientFactory>(httpClientFactoryMock.Object);
             Services.AddSingleton(_localStorageMock.Object);
+            Services.AddSingleton<AuthenticationStateProvider>(customAuthStateProvider);
+            Services.AddSingleton(userState);
             Services.AddAuthorizationCore();
 
             var fakeNavigationManager = new FakeNavigationManager(this);

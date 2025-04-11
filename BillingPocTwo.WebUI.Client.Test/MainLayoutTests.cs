@@ -10,6 +10,9 @@ using Bunit.TestDoubles;
 using BillingPocTwo.Shared.Entities;
 using Blazored.LocalStorage;
 using BillingPocTwo.Shared.Entities.Auth;
+using Moq.Protected;
+using System.Net;
+using System.Net.Http;
 
 namespace BillingPocTwo.WebUI.Client.Test
 {
@@ -32,13 +35,10 @@ namespace BillingPocTwo.WebUI.Client.Test
             };
 
             var localStorageMock = new Mock<ILocalStorageService>();
-            var httpClient = new HttpClient(new Mock<HttpMessageHandler>().Object)
-            {
-                BaseAddress = new Uri("https://localhost:7192/")
-            };
+            var httpClient = CreateMockHttpClient();
 
             _httpClientFactoryMock
-                .Setup(factory => factory.CreateClient(It.IsAny<string>()))
+                .Setup(factory => factory.CreateClient("AuthApi"))
                 .Returns(httpClient); // Setup the mock behavior
 
             var customAuthStateProvider = new CustomAuthenticationStateProvider(
@@ -64,16 +64,22 @@ namespace BillingPocTwo.WebUI.Client.Test
             var cut = RenderComponent<MainLayout>();
 
             // Act
-            var heading = cut.Find("a.external-link");
+            var image = cut.Find("a.external-link img");
 
             // Assert
-            Assert.Equal("Catholic Mutual Group", heading.TextContent.Trim());
+            Assert.Equal("Catholic Mutual Group", image.GetAttribute("alt"));
         }
 
         [Fact]
         public async Task MainLayout_ShouldInvokeLogoutOnClose()
         {
             // Arrange
+            var httpClient = CreateMockHttpClient();
+
+            _httpClientFactoryMock
+                .Setup(factory => factory.CreateClient("AuthApi"))
+                .Returns(httpClient); // Now mock the named client for "AuthApi"
+
             var cut = RenderComponent<MainLayout>();
 
             // Act
@@ -95,10 +101,7 @@ namespace BillingPocTwo.WebUI.Client.Test
             };
 
             var localStorageMock = new Mock<ILocalStorageService>();
-            var httpClient = new HttpClient(new Mock<HttpMessageHandler>().Object)
-            {
-                BaseAddress = new Uri("https://localhost:7192/")
-            };
+            var httpClient = CreateMockHttpClient();
 
             var customAuthStateProvider = new CustomAuthenticationStateProvider(
                 _httpClientFactoryMock.Object, // Use the initialized mock
@@ -106,6 +109,10 @@ namespace BillingPocTwo.WebUI.Client.Test
                 userState,
                 httpClient
             );
+
+            _httpClientFactoryMock
+                .Setup(factory => factory.CreateClient("AuthApi"))
+                .Returns(httpClient); // Now mock the named client for "AuthApi"
 
             // Override any previously registered AuthenticationStateProvider
             Services.AddSingleton<AuthenticationStateProvider>(customAuthStateProvider);
@@ -136,6 +143,29 @@ namespace BillingPocTwo.WebUI.Client.Test
                     It.Is<object[]>(args => args.Length == 1 && args[0]!.ToString() == "./js/logout.js")),
                 Times.Once
             );
+        }
+
+        private static HttpClient CreateMockHttpClient()
+        {
+            var handlerMock = new Mock<HttpMessageHandler>();
+
+            handlerMock
+                .Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>()
+                )
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = new StringContent("{}") // simulate a successful response
+                });
+
+            return new HttpClient(handlerMock.Object)
+            {
+                BaseAddress = new Uri("https://localhost:7192/")
+            };
         }
     }
 }

@@ -30,27 +30,27 @@ namespace BillingPocTwo.WebUI.Client.Test
         public ChangeRoleTests()
         {
             _localStorageMock = new Mock<ILocalStorageService>();
-            var userState = new UserState();
             _httpMessageHandlerMock = new Mock<HttpMessageHandler>();
 
+            // ? Create HttpClient using the already initialized _httpMessageHandlerMock
             _httpClient = new HttpClient(_httpMessageHandlerMock.Object)
             {
                 BaseAddress = new Uri("https://localhost:7192/")
             };
 
+            var userState = new UserState();
             var httpClientFactoryMock = new Mock<IHttpClientFactory>();
-            httpClientFactoryMock
-                .Setup(factory => factory.CreateClient(It.IsAny<string>()))
-                .Returns(_httpClient);
+            httpClientFactoryMock.Setup(factory => factory.CreateClient(It.IsAny<string>()))
+                                 .Returns(_httpClient);
 
             var customAuthStateProvider = new CustomAuthenticationStateProvider(
                 httpClientFactoryMock.Object,
                 _localStorageMock.Object,
                 userState,
-                _httpClient
-            );
+                _httpClient);
 
             Services.AddSingleton<HttpClient>(_httpClient);
+            Services.AddSingleton<IHttpClientFactory>(httpClientFactoryMock.Object);
             Services.AddSingleton(_localStorageMock.Object);
             Services.AddSingleton<AuthenticationStateProvider>(customAuthStateProvider);
             Services.AddSingleton(userState);
@@ -58,8 +58,6 @@ namespace BillingPocTwo.WebUI.Client.Test
 
             var fakeNavigationManager = new FakeNavigationManager(this);
             Services.AddSingleton<NavigationManager>(fakeNavigationManager);
-
-            fakeNavigationManager.NavigateTo("https://localhost:7192/");
         }
 
         [Fact]

@@ -24,6 +24,7 @@ namespace BillingPocTwo.WebUI.Client.Test
     {
         private readonly Mock<ILocalStorageService> _localStorageMock;
         private readonly Mock<HttpMessageHandler> _httpMessageHandlerMock;
+        private Mock<IHttpClientFactory> httpClientFactoryMock = new Mock<IHttpClientFactory>();
         private readonly HttpClient _httpClient;
 
         public DeleteUserTests()
@@ -31,20 +32,17 @@ namespace BillingPocTwo.WebUI.Client.Test
             _localStorageMock = new Mock<ILocalStorageService>();
             _httpMessageHandlerMock = new Mock<HttpMessageHandler>();
 
-            _httpClient = new HttpClient(_httpMessageHandlerMock.Object)
-            {
-                BaseAddress = new Uri("https://localhost:7192/")
-            };
+            _httpClient = CreateMockHttpClient();
 
             var userState = new UserState();
-            var httpClientFactoryMock = new Mock<IHttpClientFactory>();
             httpClientFactoryMock
-                .Setup(factory => factory.CreateClient(It.IsAny<string>()))
+                .Setup(factory => factory.CreateClient("AuthApi"))
                 .Returns(_httpClient);
 
             var customAuthStateProvider = new CustomAuthenticationStateProvider(httpClientFactoryMock.Object, _localStorageMock.Object, userState, _httpClient);
 
             Services.AddSingleton<HttpClient>(_httpClient);
+            Services.AddSingleton<IHttpClientFactory>(httpClientFactoryMock.Object);
             Services.AddSingleton(_localStorageMock.Object);
             Services.AddSingleton<AuthenticationStateProvider>(customAuthStateProvider);
             Services.AddSingleton(userState);
@@ -52,6 +50,29 @@ namespace BillingPocTwo.WebUI.Client.Test
 
             var fakeNavigationManager = new FakeNavigationManager(this);
             Services.AddSingleton<NavigationManager>(fakeNavigationManager);
+        }
+
+        private static HttpClient CreateMockHttpClient()
+        {
+            var handlerMock = new Mock<HttpMessageHandler>();
+
+            handlerMock
+                .Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>()
+                )
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = new StringContent("{}") // Simulate a successful response
+                });
+
+            return new HttpClient(handlerMock.Object)
+            {
+                BaseAddress = new Uri("https://localhost:7192/")
+            };
         }
 
         [Fact]
@@ -96,6 +117,15 @@ namespace BillingPocTwo.WebUI.Client.Test
             _localStorageMock
                 .Setup(x => x.GetItemAsync<string>("authToken", It.IsAny<CancellationToken>()))
                 .ReturnsAsync(token);
+
+            var failingClient = new HttpClient(_httpMessageHandlerMock.Object)
+            {
+                BaseAddress = new Uri("https://localhost:7192/")
+            };
+
+            httpClientFactoryMock
+                .Setup(factory => factory.CreateClient("AuthApi"))
+                .Returns(failingClient);
 
             // Mocking the HttpClient to return a response
             _httpMessageHandlerMock
@@ -168,6 +198,15 @@ namespace BillingPocTwo.WebUI.Client.Test
             _localStorageMock
                 .Setup(x => x.GetItemAsync<string>("authToken", It.IsAny<CancellationToken>()))
                 .ReturnsAsync(token);
+
+            var failingClient = new HttpClient(_httpMessageHandlerMock.Object)
+            {
+                BaseAddress = new Uri("https://localhost:7192/")
+            };
+
+            httpClientFactoryMock
+                .Setup(factory => factory.CreateClient("AuthApi"))
+                .Returns(failingClient);
 
             _httpMessageHandlerMock
                 .Protected()

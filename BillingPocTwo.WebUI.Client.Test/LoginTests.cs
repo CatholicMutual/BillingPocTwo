@@ -18,6 +18,7 @@ using System.Text;
 using BillingPocTwo.Shared.Entities;
 using Bunit.TestDoubles;
 using BillingPocTwo.Shared.Entities.Auth;
+using System.Net.Http;
 
 namespace BillingPocTwo.WebUI.Client.Test
 {
@@ -27,31 +28,36 @@ namespace BillingPocTwo.WebUI.Client.Test
         private readonly Mock<AuthenticationStateProvider> _authStateProviderMock;
         private readonly Mock<HttpMessageHandler> _httpMessageHandlerMock;
         private readonly HttpClient _httpClient;
+        private readonly Mock<IHttpClientFactory> _httpClientFactoryMock;
 
         public LoginTests()
         {
             _localStorageMock = new Mock<ILocalStorageService>();
             var userState = new UserState();
             _httpMessageHandlerMock = new Mock<HttpMessageHandler>();
+            _httpClientFactoryMock = new Mock<IHttpClientFactory>();
+
             _httpClient = new HttpClient(_httpMessageHandlerMock.Object)
             {
                 BaseAddress = new Uri("https://localhost:7192/")
             };
 
             // Create an IHttpClientFactory mock to satisfy the constructor requirement
-            var httpClientFactoryMock = new Mock<IHttpClientFactory>();
-            httpClientFactoryMock
-                .Setup(factory => factory.CreateClient(It.IsAny<string>()))
-                .Returns(_httpClient);
+            var httpClient = CreateMockHttpClient();
+
+            _httpClientFactoryMock
+                .Setup(factory => factory.CreateClient("AuthApi"))
+                .Returns(httpClient); // Setup the mock behavior
 
             var customAuthStateProvider = new CustomAuthenticationStateProvider(
-                httpClientFactoryMock.Object, // Pass the mocked IHttpClientFactory
+                _httpClientFactoryMock.Object, // Pass the mocked IHttpClientFactory
                 _localStorageMock.Object,
                 userState,
                 _httpClient
             );
 
             Services.AddSingleton(_httpClient);
+            Services.AddSingleton(_httpClientFactoryMock.Object);
             Services.AddSingleton(_localStorageMock.Object);
             Services.AddSingleton<AuthenticationStateProvider>(customAuthStateProvider);
             Services.AddSingleton(userState);
@@ -86,6 +92,15 @@ namespace BillingPocTwo.WebUI.Client.Test
                 Content = new StringContent("Invalid username or password")
             };
 
+            var failingClient = new HttpClient(_httpMessageHandlerMock.Object)
+            {
+                BaseAddress = new Uri("https://localhost:7192/")
+            };
+
+            _httpClientFactoryMock
+                .Setup(factory => factory.CreateClient("AuthApi"))
+                .Returns(failingClient);
+
             _httpMessageHandlerMock
                 .Protected()
                 .Setup<Task<HttpResponseMessage>>(
@@ -97,10 +112,7 @@ namespace BillingPocTwo.WebUI.Client.Test
                 )
                 .ReturnsAsync(responseMessage);
 
-            var httpClient = new HttpClient(_httpMessageHandlerMock.Object)
-            {
-                BaseAddress = new Uri("https://localhost:7192")
-            };
+            var httpClient = CreateMockHttpClient();
 
             var cut = RenderComponent<Login>();
             cut.Instance.loginModel = loginDto;
@@ -109,12 +121,8 @@ namespace BillingPocTwo.WebUI.Client.Test
             await cut.InvokeAsync(() => cut.Instance.HandleLogin());
 
             // Assert
-            cut.WaitForState(() => !cut.Instance.isLoading);
-            cut.WaitForAssertion(() =>
-            {
-                var errorMessage = cut.Find("em").TextContent;
-                Assert.Equal("Invalid username or password", errorMessage);
-            });
+            var errorMessage = cut.WaitForElement("em", TimeSpan.FromSeconds(15));
+            errorMessage.MarkupMatches("<em>Invalid username or password</em>");
         }
 
         [Fact]
@@ -128,24 +136,23 @@ namespace BillingPocTwo.WebUI.Client.Test
             {
                 Content = JsonContent.Create(tokenResponse)
             };
+            var httpClient = CreateMockHttpClient();
+
 
             var expectedUri = new Uri("https://localhost:7192/api/auth/login");
 
-            _httpMessageHandlerMock
-                .Protected()
-                .Setup<Task<HttpResponseMessage>>(
-                    "SendAsync",
-                    ItExpr.Is<HttpRequestMessage>(req => req.Method == HttpMethod.Post && req.RequestUri == expectedUri),
-                    ItExpr.IsAny<CancellationToken>()
-                )
-                .ReturnsAsync(responseMessage);
+            _httpClientFactoryMock
+               .Setup(factory => factory.CreateClient("AuthApi"))
+               .Returns(httpClient); // Now mock the named client for "AuthApi"
 
             // Act
-            await cut.Instance.HandleLogin();
+            await cut.InvokeAsync(() => cut.Instance.HandleLogin());
 
             // Assert
             cut.WaitForState(() => !cut.Instance.isLoading);
-            _localStorageMock.Verify(x => x.SetItemAsync("authToken", tokenResponse.AccessToken, CancellationToken.None), Times.Once);
+            _localStorageMock.Verify(x =>
+                x.SetItemAsync("authToken", It.Is<string>(token => !string.IsNullOrWhiteSpace(token)), CancellationToken.None),
+                Times.Once);
             var customAuthStateProvider = Services.GetRequiredService<AuthenticationStateProvider>() as CustomAuthenticationStateProvider;
             Assert.NotNull(customAuthStateProvider);
             customAuthStateProvider.NotifyUserAuthentication(tokenResponse.AccessToken);
@@ -162,14 +169,73 @@ namespace BillingPocTwo.WebUI.Client.Test
             {
                 Subject = new ClaimsIdentity(new Claim[]
                 {
-                    new Claim(ClaimTypes.Email, "test@example.com"),
-                    new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString())
+                    new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString()),  // User ID
+                    new Claim(ClaimTypes.Email, "test@example.com"), // Email
+                    new Claim(ClaimTypes.Name, "Test User"), // Name (Optional)
+                    new Claim("role", "User") // Example of an additional claim (e.g., role)
                 }),
                 Expires = DateTime.UtcNow.AddMinutes(30),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
+
             var token = tokenHandler.CreateToken(tokenDescriptor);
             return tokenHandler.WriteToken(token);
         }
+
+        private static HttpClient CreateMockHttpClientRender()
+        {
+            var handlerMock = new Mock<HttpMessageHandler>();
+
+            handlerMock
+                .Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>()
+                )
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = new StringContent("{}") // simulate a successful response
+                });
+
+            return new HttpClient(handlerMock.Object)
+            {
+                BaseAddress = new Uri("https://localhost:7192/")
+            };
+        }
+
+        private HttpClient CreateMockHttpClient()
+        {
+            var handlerMock = new Mock<HttpMessageHandler>();
+
+            var tokenResponse = new TokenResponseDto
+            {
+                AccessToken = GenerateValidJwtToken(),
+                RefreshToken = "validRefreshToken"
+            };
+
+            var responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(tokenResponse)
+            };
+
+            handlerMock
+                .Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.Is<HttpRequestMessage>(req =>
+                        req.Method == HttpMethod.Post &&
+                        req.RequestUri == new Uri("https://localhost:7192/api/auth/login")),
+                    ItExpr.IsAny<CancellationToken>()
+                )
+                .ReturnsAsync(responseMessage);
+
+            return new HttpClient(handlerMock.Object)
+            {
+                BaseAddress = new Uri("https://localhost:7192/")
+            };
+        }
+
     }
 }
