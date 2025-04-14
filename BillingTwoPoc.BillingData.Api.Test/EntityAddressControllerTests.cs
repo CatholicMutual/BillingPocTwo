@@ -3,6 +3,7 @@ using BillingPocTwo.BillingData.Api.Data;
 using BillingPocTwo.Shared.Entities.Billing;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.EntityFrameworkCore.Query.Internal;
 using Moq;
@@ -26,12 +27,35 @@ namespace BillingPocTwo.BillingData.Api.Test
             _mockContext = new Mock<IBillingDbContext>();
             _mockDbSet = new Mock<DbSet<ENTITY_ADDRESS_INFO>>();
 
-            // Setup DbSet mock
-            _mockContext.Setup(c => c.EntityAddresses).Returns(_mockDbSet.Object);
-
             // Initialize the controller
             _controller = new EntityAddressController(_mockContext.Object);
         }
+
+        private void SetupDbSet(IEnumerable<ENTITY_ADDRESS_INFO> sourceData)
+        {
+            var queryableData = sourceData.AsQueryable();
+            var asyncData = new TestAsyncEnumerable<ENTITY_ADDRESS_INFO>(queryableData);
+
+            _mockDbSet.As<IAsyncEnumerable<ENTITY_ADDRESS_INFO>>()
+                .Setup(m => m.GetAsyncEnumerator(It.IsAny<CancellationToken>()))
+                .Returns(asyncData.GetAsyncEnumerator);
+
+            _mockDbSet.As<IQueryable<ENTITY_ADDRESS_INFO>>()
+                .Setup(m => m.Provider)
+                .Returns(new TestAsyncQueryProvider<ENTITY_ADDRESS_INFO>(queryableData.Provider));
+            _mockDbSet.As<IQueryable<ENTITY_ADDRESS_INFO>>()
+                .Setup(m => m.Expression)
+                .Returns(queryableData.Expression);
+            _mockDbSet.As<IQueryable<ENTITY_ADDRESS_INFO>>()
+                .Setup(m => m.ElementType)
+                .Returns(queryableData.ElementType);
+            _mockDbSet.As<IQueryable<ENTITY_ADDRESS_INFO>>()
+                .Setup(m => m.GetEnumerator())
+                .Returns(() => queryableData.GetEnumerator());
+
+            _mockContext.Setup(c => c.EntityAddresses).Returns(_mockDbSet.Object);
+        }
+
 
         [Fact]
         public async Task GetAllEntityAddresses_ShouldReturnOkResult_WithEntityAddresses()
@@ -43,14 +67,7 @@ namespace BillingPocTwo.BillingData.Api.Test
                 new ENTITY_ADDRESS_INFO { SYSTEM_ENTITY_CODE = 2, ADDRESS_TYPE = "Billing", FULL_NAME = "Jane Smith" }
             }.AsQueryable();
 
-            var asyncEntityAddresses = new TestAsyncEnumerable<ENTITY_ADDRESS_INFO>(entityAddresses);
-
-            _mockDbSet.As<IQueryable<ENTITY_ADDRESS_INFO>>().Setup(m => m.Provider).Returns(asyncEntityAddresses.Provider);
-            _mockDbSet.As<IQueryable<ENTITY_ADDRESS_INFO>>().Setup(m => m.Expression).Returns(asyncEntityAddresses.Expression);
-            _mockDbSet.As<IQueryable<ENTITY_ADDRESS_INFO>>().Setup(m => m.ElementType).Returns(asyncEntityAddresses.ElementType);
-            _mockDbSet.As<IQueryable<ENTITY_ADDRESS_INFO>>().Setup(m => m.GetEnumerator()).Returns(entityAddresses.GetEnumerator());
-            _mockDbSet.As<IAsyncEnumerable<ENTITY_ADDRESS_INFO>>().Setup(m => m.GetAsyncEnumerator(It.IsAny<CancellationToken>()))
-                .Returns(asyncEntityAddresses.GetAsyncEnumerator());
+            SetupDbSet(entityAddresses);
 
             // Act
             var result = await _controller.GetAllEntityAddresses();
@@ -72,10 +89,9 @@ namespace BillingPocTwo.BillingData.Api.Test
                 FULL_NAME = "John Doe"
             };
 
-            _mockDbSet.Setup(m => m.FirstOrDefaultAsync(
-                It.IsAny<System.Linq.Expressions.Expression<System.Func<ENTITY_ADDRESS_INFO, bool>>>(),
-                It.IsAny<CancellationToken>()
-            )).ReturnsAsync(entityAddress);
+            var entityAddresses = new List<ENTITY_ADDRESS_INFO> { entityAddress };
+
+            SetupDbSet(entityAddresses);
 
             // Act
             var result = await _controller.GetEntityAddressesBySystemEntityCode(1);
@@ -90,10 +106,12 @@ namespace BillingPocTwo.BillingData.Api.Test
         public async Task GetEntityAddressesBySystemEntityCode_ShouldReturnNotFound_WhenEntityAddressDoesNotExist()
         {
             // Arrange
-            _mockDbSet.Setup(m => m.FirstOrDefaultAsync(
-                It.IsAny<System.Linq.Expressions.Expression<System.Func<ENTITY_ADDRESS_INFO, bool>>>(),
-                It.IsAny<CancellationToken>()
-            )).ReturnsAsync((ENTITY_ADDRESS_INFO)null);
+            //var entityAddresses = new List<ENTITY_ADDRESS_INFO>
+            //{
+            //    new ENTITY_ADDRESS_INFO { SYSTEM_ENTITY_CODE = 2, ADDRESS_TYPE = "Billing", FULL_NAME = "Jane Smith" }
+            //}.AsQueryable();
+
+            SetupDbSet(new List<ENTITY_ADDRESS_INFO>());
 
             // Act
             var result = await _controller.GetEntityAddressesBySystemEntityCode(1);
@@ -111,16 +129,9 @@ namespace BillingPocTwo.BillingData.Api.Test
             {
                 new ENTITY_ADDRESS_INFO { SYSTEM_ENTITY_CODE = 1, ADDRESS_TYPE = "Mailing", FULL_NAME = "John Doe" },
                 new ENTITY_ADDRESS_INFO { SYSTEM_ENTITY_CODE = 2, ADDRESS_TYPE = "Billing", FULL_NAME = "Jane Smith" }
-            }.AsQueryable();
+            };
 
-            var asyncEntityAddresses = new TestAsyncEnumerable<ENTITY_ADDRESS_INFO>(entityAddresses);
-
-            _mockDbSet.As<IQueryable<ENTITY_ADDRESS_INFO>>().Setup(m => m.Provider).Returns(asyncEntityAddresses.Provider);
-            _mockDbSet.As<IQueryable<ENTITY_ADDRESS_INFO>>().Setup(m => m.Expression).Returns(asyncEntityAddresses.Expression);
-            _mockDbSet.As<IQueryable<ENTITY_ADDRESS_INFO>>().Setup(m => m.ElementType).Returns(asyncEntityAddresses.ElementType);
-            _mockDbSet.As<IQueryable<ENTITY_ADDRESS_INFO>>().Setup(m => m.GetEnumerator()).Returns(entityAddresses.GetEnumerator());
-            _mockDbSet.As<IAsyncEnumerable<ENTITY_ADDRESS_INFO>>().Setup(m => m.GetAsyncEnumerator(It.IsAny<CancellationToken>()))
-                .Returns(asyncEntityAddresses.GetAsyncEnumerator());
+            SetupDbSet(entityAddresses);
 
             // Act
             var result = await _controller.GetEntityAddressesBySystemEntityCodes(new List<decimal> { 1, 2 });
@@ -143,7 +154,10 @@ namespace BillingPocTwo.BillingData.Api.Test
             };
 
             _mockDbSet.Setup(m => m.AddAsync(newEntityAddress, It.IsAny<CancellationToken>()))
-                      .ReturnsAsync((Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<ENTITY_ADDRESS_INFO>)null);
+                .ReturnsAsync((EntityEntry<ENTITY_ADDRESS_INFO>)null); // Simulate the AddAsync behavio
+
+            _mockContext.Setup(c => c.EntityAddresses).Returns(_mockDbSet.Object);
+            _mockContext.Setup(c => c.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
             // Act
             var result = await _controller.CreateEntityAddress(newEntityAddress);
@@ -165,7 +179,10 @@ namespace BillingPocTwo.BillingData.Api.Test
                 FULL_NAME = "John Doe"
             };
 
+            _mockContext.Setup(c => c.EntityAddresses).Returns(_mockDbSet.Object);
             _mockDbSet.Setup(m => m.FindAsync(It.IsAny<object[]>())).ReturnsAsync(existingEntityAddress);
+            _mockDbSet.Setup(m => m.Remove(It.IsAny<ENTITY_ADDRESS_INFO>())).Verifiable();
+            _mockContext.Setup(c => c.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
             // Act
             var result = await _controller.UpdateEntityAddress(1, existingEntityAddress);
@@ -187,6 +204,8 @@ namespace BillingPocTwo.BillingData.Api.Test
             };
 
             _mockDbSet.Setup(m => m.FindAsync(It.IsAny<object[]>())).ReturnsAsync(entityAddress);
+            _mockContext.Setup(c => c.EntityAddresses).Returns(_mockDbSet.Object);
+            _mockContext.Setup(c => c.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
             // Act
             var result = await _controller.DeleteEntityAddress(1);
@@ -200,6 +219,7 @@ namespace BillingPocTwo.BillingData.Api.Test
         {
             // Arrange
             _mockDbSet.Setup(m => m.FindAsync(It.IsAny<object[]>())).ReturnsAsync((ENTITY_ADDRESS_INFO)null);
+            _mockContext.Setup(c => c.EntityAddresses).Returns(_mockDbSet.Object);
 
             // Act
             var result = await _controller.DeleteEntityAddress(1);
@@ -212,17 +232,31 @@ namespace BillingPocTwo.BillingData.Api.Test
 
     public class TestAsyncEnumerable<T> : EnumerableQuery<T>, IAsyncEnumerable<T>, IQueryable<T>
     {
-        public TestAsyncEnumerable(IEnumerable<T> enumerable) : base(enumerable) { }
-        public TestAsyncEnumerable(Expression expression) : base(expression) { }
+        private readonly Expression _expression;
+
+        public TestAsyncEnumerable(IEnumerable<T> enumerable) : base(enumerable)
+        {
+            _expression = Expression.Constant(this);
+        }
+
+        public TestAsyncEnumerable(Expression expression) : base(expression)
+        {
+            _expression = expression;
+        }
 
         public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = default)
         {
             return new TestAsyncEnumerator<T>(this.AsEnumerable().GetEnumerator());
         }
 
-        public Expression Expression => ((IQueryable)this).Expression; // Ensure this property is implemented
-        public Type ElementType => typeof(T); // Ensure this property is implemented
-        public IQueryProvider Provider => new TestAsyncQueryProvider<T>(this); // Ensure this property is implemented
+        // Implement the Expression property without using 'override'
+        public new Expression Expression => _expression;
+
+        // Implement the ElementType property
+        public new Type ElementType => typeof(T);
+
+        // Implement the Provider property
+        public new IQueryProvider Provider => new TestAsyncQueryProvider<T>(this);
     }
 
     public class TestAsyncEnumerator<T> : IAsyncEnumerator<T>
@@ -269,17 +303,35 @@ namespace BillingPocTwo.BillingData.Api.Test
 
         public object Execute(Expression expression)
         {
+            // Delegate execution to the inner provider
             return _inner.Execute(expression);
         }
 
         public TResult Execute<TResult>(Expression expression)
         {
+            // Delegate execution to the inner provider
             return _inner.Execute<TResult>(expression);
         }
 
         public TResult ExecuteAsync<TResult>(Expression expression, CancellationToken cancellationToken)
         {
-            return Task.FromResult(Execute<TResult>(expression)).Result;
+            // This handles Task<T> results
+            var expectedResultType = typeof(TResult);
+            if (expectedResultType.IsGenericType && expectedResultType.GetGenericTypeDefinition() == typeof(Task<>))
+            {
+                var innerType = expectedResultType.GetGenericArguments()[0];
+
+                var result = _inner.Execute(expression); // call the underlying sync Execute
+                var taskResult = typeof(Task)
+                    .GetMethod(nameof(Task.FromResult))!
+                    .MakeGenericMethod(innerType)
+                    .Invoke(null, new[] { result });
+
+                return (TResult)taskResult!;
+            }
+
+            // This handles direct TResult returns
+            return (TResult)_inner.Execute(expression);
         }
     }
 }

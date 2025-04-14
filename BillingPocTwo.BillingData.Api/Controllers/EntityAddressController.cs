@@ -74,18 +74,21 @@ namespace BillingPocTwo.BillingData.Api.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateEntityAddress(decimal id, [FromBody] ENTITY_ADDRESS_INFO updatedEntityAddress)
         {
-            if (id != updatedEntityAddress.SEQ_ENTITY_ADDRESS_INFO)
-            {
-                return BadRequest("ID mismatch.");
-            }
-
             var existingEntityAddress = await _context.EntityAddresses.FindAsync(id);
             if (existingEntityAddress == null)
             {
                 return NotFound($"Entity address with ID {id} not found.");
             }
 
-            _context.Entry(existingEntityAddress).CurrentValues.SetValues(updatedEntityAddress);
+            // Update properties
+            existingEntityAddress.ADDRESS_TYPE = updatedEntityAddress.ADDRESS_TYPE;
+            existingEntityAddress.FULL_NAME = updatedEntityAddress.FULL_NAME;
+            existingEntityAddress.ADDRESS1 = updatedEntityAddress.ADDRESS1;
+            existingEntityAddress.ADDRESS2 = updatedEntityAddress.ADDRESS2;
+            existingEntityAddress.CITY = updatedEntityAddress.CITY;
+            existingEntityAddress.STATE = updatedEntityAddress.STATE;
+            existingEntityAddress.ZIP_CODE = updatedEntityAddress.ZIP_CODE;
+
             await _context.SaveChangesAsync();
 
             return NoContent();
