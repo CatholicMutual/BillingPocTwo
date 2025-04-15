@@ -9,6 +9,7 @@ namespace BillingPocTwo.Shared.DataObjects
     public class EntityDetailsDto
     {
         public decimal SYSTEM_ENTITY_CODE { get; set; }
+        public string SOURCE_SYSTEM_ENTITY_CODE { get; set; } = string.Empty;
         public string? FULL_NAME { get; set; }
         public string? CITY { get; set; }
         public string? STATE { get; set; }

@@ -16,45 +16,23 @@
 {
     <p>Loading...</p>
 }
-else if (EntityDetails != null)
+else if (SearchResults != null && SearchResults.Any())
 {
     <div class="panel panel-default mt-4">
         <div class="panel-heading">
-            <h4>Entity Details</h4>
+            <h4>Search Results</h4>
         </div>
         <div class="panel-body">
-            <p><strong>SYSTEM ENTITY CODE:</strong> @EntityDetails.SYSTEM_ENTITY_CODE</p>
-            <p><strong>FULL NAME:</strong> @EntityDetails.FULL_NAME</p>
-            <p><strong>CITY:</strong> @EntityDetails.CITY</p>
-            <p><strong>STATE:</strong> @EntityDetails.STATE</p>
-            <p><strong>POLICY IDs:</strong></p>
             <ul>
-                @foreach (var policyTermId in EntityDetails.PolicyTermIds)
+                @foreach (var result in SearchResults)
                 {
                     <li>
-                        <a href="javascript:void(0)" @onclick="() => ShowPolicyDetails(policyTermId, SearchTerm)">@policyTermId</a>
+                        <a href="/account-view/@result.SOURCE_SYSTEM_ENTITY_CODE">@result.FULL_NAME (@result.SOURCE_SYSTEM_ENTITY_CODE)</a>
                     </li>
                 }
             </ul>
         </div>
     </div>
-
-    <Modal IsVisible="@IsModalVisible" OnClose="CloseModal">
-        @if (SelectedPolicy != null)
-        {
-            <div>
-                <h5>Policy Details</h5>
-                <p><strong>Policy Number:</strong> @SelectedPolicy.POLICY_NO</p>
-                <p><strong>Effective Date:</strong> @SelectedPolicy.POLICY_EFFECTIVE_DATE</p>
-                <p><strong>Expiration Date:</strong> @SelectedPolicy.POLICY_EXPIRATION_DATE</p>
-                <p><strong>Balance:</strong> @SelectedPolicy.BALANCE</p>
-            </div>
-        }
-        else
-        {
-            <p>Loading policy details...</p>
-        }
-    </Modal>
 }
 else if (!string.IsNullOrEmpty(ErrorMessage))
 {
@@ -64,23 +42,46 @@ else if (!string.IsNullOrEmpty(ErrorMessage))
 @code {
     private string SearchTerm = string.Empty;
     private bool IsLoading = false;
-    private EntityDetailsDto? EntityDetails = null;
+    private List<EntityDetailsDto>? SearchResults = null;
     private string? ErrorMessage = null;
-    private POLICY_REGISTER? SelectedPolicy = null;
-    private bool IsModalVisible = false;
-
 
     private async Task PerformSearch()
     {
         IsLoading = true;
         ErrorMessage = null;
-        EntityDetails = null;
+        SearchResults = null;
 
         var client = HttpClientFactory.CreateClient("BillingDataApi");
 
         try
         {
-            EntityDetails = await client.GetFromJsonAsync<EntityDetailsDto>($"api/EntityRegister/details/{SearchTerm}");
+            if (IsAccountNumber(SearchTerm))
+            {
+                // Search by account number
+                var result = await client.GetFromJsonAsync<EntityDetailsDto>($"api/EntityRegister/details/{SearchTerm}");
+                if (result != null)
+                {
+                    SearchResults = new List<EntityDetailsDto> { result };
+                }
+            }
+            else if (IsPolicyNumber(SearchTerm))
+            {
+                // Search by policy number
+                var result = await client.GetFromJsonAsync<EntityDetailsDto>($"api/EntityRegister/details/policy/{SearchTerm}");
+                if (result != null)
+                {
+                    SearchResults = new List<EntityDetailsDto> { result };
+                }
+            }
+            else
+            {
+                // Assume it's a name search
+                SearchResults = await client.GetFromJsonAsync<List<EntityDetailsDto>>($"api/EntityRegister/details/name/{SearchTerm}");
+                if (SearchResults == null || !SearchResults.Any())
+                {
+                    ErrorMessage = "No results found for the provided name.";
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -90,34 +91,46 @@ else if (!string.IsNullOrEmpty(ErrorMessage))
         IsLoading = false;
     }
 
-    private async Task ShowPolicyDetails(decimal policyTermId, string sourceSystemEntityCode)
+    private bool IsAccountNumber(string input)
     {
-        SelectedPolicy = null;
-        IsModalVisible = true;
-
-        var client = HttpClientFactory.CreateClient("BillingDataApi");
-
-        try
-        {
-            SelectedPolicy = await client.GetFromJsonAsync<POLICY_REGISTER>($"api/Policy/details/{sourceSystemEntityCode}/{policyTermId}");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error: {ex.Message}");
-        }
+        // Validate the format XXXX-XXX or XXXX-XXXX where the last digit can be a character
+        return System.Text.RegularExpressions.Regex.IsMatch(input, @"^\d{4}-\w{3,4}$");
     }
+
+    private bool IsPolicyNumber(string input)
+    {
+        // Example: Policy numbers may have a specific alphanumeric format
+        return input.StartsWith("POL") && input.Length > 3; // Adjust logic as needed
+    }
+
+    // private async Task ShowPolicyDetails(decimal policyTermId, string sourceSystemEntityCode)
+    // {
+    //     SelectedPolicy = null;
+    //     IsModalVisible = true;
+
+    //     var client = HttpClientFactory.CreateClient("BillingDataApi");
+
+    //     try
+    //     {
+    //         SelectedPolicy = await client.GetFromJsonAsync<POLICY_REGISTER>($"api/Policy/details/{sourceSystemEntityCode}/{policyTermId}");
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         Console.WriteLine($"Error: {ex.Message}");
+    //     }
+    // }
 
     private void OnSearchTermChanged(ChangeEventArgs e)
     {
         // Clear EntityDetails when the search term changes
         if (e.Value is string newValue && newValue != SearchTerm)
         {
-            EntityDetails = null;
+            SearchResults = null;
         }
     }
 
-    private void CloseModal()
-    {
-        IsModalVisible = false;
-    }
+    // private void CloseModal()
+    // {
+    //     IsModalVisible = false;
+    // }
 }

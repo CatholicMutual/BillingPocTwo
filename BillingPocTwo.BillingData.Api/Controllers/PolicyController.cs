@@ -48,6 +48,59 @@ namespace BillingPocTwo.BillingData.Api.Controllers
             return Ok(policies);
         }
 
+        // Route: GET api/Policy/BySourceSystemEntityCodeWithIntermediate/{sourceSystemEntityCode}
+        [HttpGet("BySourceSystemEntityCodeWithIntermediate/{sourceSystemEntityCode}")]
+        public async Task<IActionResult> GetPoliciesBySourceSystemEntityCodeWithIntermediate(string sourceSystemEntityCode)
+        {
+            if (string.IsNullOrWhiteSpace(sourceSystemEntityCode))
+            {
+                return BadRequest("SOURCE_SYSTEM_ENTITY_CODE cannot be null or empty.");
+            }
+
+            try
+            {
+                // Step 1: Find the SYSTEM_ENTITY_CODE for the given SOURCE_SYSTEM_ENTITY_CODE
+                var systemEntityCode = await _context.EntityRegisters
+                    .Where(e => e.SOURCE_SYSTEM_ENTITY_CODE == sourceSystemEntityCode)
+                    .Select(e => e.SYSTEM_ENTITY_CODE)
+                    .FirstOrDefaultAsync();
+
+                if (systemEntityCode == 0)
+                {
+                    return NotFound($"No SYSTEM_ENTITY_CODE found for SOURCE_SYSTEM_ENTITY_CODE: {sourceSystemEntityCode}");
+                }
+
+                // Step 2: Query the POLICY_ENTITY_REGISTER table for POLICY_TERM_IDs associated with the SYSTEM_ENTITY_CODE
+                var policyTermIds = await _context.PolicyEntityIntermediate
+                    .Where(pe => pe.SYSTEM_ENTITY_CODE == systemEntityCode)
+                    .Select(pe => pe.POLICY_TERM_ID)
+                    .Distinct()
+                    .ToListAsync();
+
+                if (!policyTermIds.Any())
+                {
+                    return NotFound($"No POLICY_TERM_IDs found for SYSTEM_ENTITY_CODE: {systemEntityCode}");
+                }
+
+                // Step 3: Query the POLICY_REGISTER table for policies associated with the POLICY_TERM_IDs
+                var policies = await _context.PolicyRegisters
+                    .Where(pr => policyTermIds.Contains(pr.POLICY_TERM_ID))
+                    .ToListAsync();
+
+                if (!policies.Any())
+                {
+                    return NotFound($"No policies found for the given POLICY_TERM_IDs.");
+                }
+
+                return Ok(policies);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
+
         [HttpGet("details/{sourceSystemEntityCode}/{policyTermId}")]
         public async Task<IActionResult> GetPolicyDetails(string sourceSystemEntityCode, decimal policyTermId)
         {

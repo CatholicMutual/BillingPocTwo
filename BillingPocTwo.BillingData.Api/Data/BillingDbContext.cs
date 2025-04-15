@@ -12,7 +12,8 @@ namespace BillingPocTwo.BillingData.Api.Data
         public DbSet<ENTITY_REGISTER> EntityRegisters { get; set; }
         public DbSet<ENTITY_ADDRESS_INFO> EntityAddresses { get; set; }
         public DbSet<POLICY_ENTITY_REGISTER> PolicyEntityIntermediate { get; set; }
-        public DbSet<POLICY_REGISTER> PolicyRegisters { get; set; } 
+        public DbSet<POLICY_REGISTER> PolicyRegisters { get; set; }
+        public DbSet<TRANSACTION_LOG> TransactionLogs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -34,6 +35,10 @@ namespace BillingPocTwo.BillingData.Api.Data
             modelBuilder.Entity<POLICY_REGISTER>()
                 .ToTable("POLICY_REGISTER")
                 .HasKey(e => e.POLICY_TERM_ID);
+
+            modelBuilder.Entity<TRANSACTION_LOG>()
+                .ToTable("TRANSACTION_LOG")
+                .HasKey(e => e.SYSTEM_TRANSACTION_SEQ);
         }
 
         void IBillingDbContext.OnModelCreating(ModelBuilder modelBuilder)

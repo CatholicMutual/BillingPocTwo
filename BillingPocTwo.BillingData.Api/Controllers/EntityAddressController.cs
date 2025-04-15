@@ -39,6 +39,39 @@ namespace BillingPocTwo.BillingData.Api.Controllers
             return Ok(entityAddresses);
         }
 
+        // Route: GET api/EntityAddress/addresses/{sourceSystemEntityCode}
+        [HttpGet("addresses/{sourceSystemEntityCode}")]
+        public async Task<IActionResult> GetAddressesBySourceSystemEntityCode(string sourceSystemEntityCode)
+        {
+            if (string.IsNullOrWhiteSpace(sourceSystemEntityCode))
+            {
+                return BadRequest("SOURCE_SYSTEM_ENTITY_CODE cannot be null or empty.");
+            }
+
+            // Find the corresponding SYSTEM_ENTITY_CODE
+            var systemEntityCode = await _context.EntityRegisters
+                .Where(e => e.SOURCE_SYSTEM_ENTITY_CODE == sourceSystemEntityCode)
+                .Select(e => e.SYSTEM_ENTITY_CODE)
+                .FirstOrDefaultAsync();
+
+            if (systemEntityCode == 0)
+            {
+                return NotFound($"No SYSTEM_ENTITY_CODE found for SOURCE_SYSTEM_ENTITY_CODE: {sourceSystemEntityCode}");
+            }
+
+            // Use the SYSTEM_ENTITY_CODE to find addresses
+            var addresses = await _context.EntityAddresses
+                .Where(e => e.SYSTEM_ENTITY_CODE == systemEntityCode)
+                .ToListAsync();
+
+            if (!addresses.Any())
+            {
+                return NotFound($"No addresses found for SYSTEM_ENTITY_CODE: {systemEntityCode}");
+            }
+
+            return Ok(addresses);
+        }
+
         [HttpPost("batch")]
         public async Task<IActionResult> GetEntityAddressesBySystemEntityCodes([FromBody] List<decimal> systemEntityCodes)
         {

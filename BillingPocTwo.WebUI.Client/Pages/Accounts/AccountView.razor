@@ -1,0 +1,237 @@
+﻿@page "/account-view/{accountNumber}"
+
+@inject HttpClient Http
+@inject IHttpClientFactory HttpClientFactory
+
+<h3>Account</h3>
+
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="row mb-3">
+        <div class="col">
+            <h4>@AccountName</h4>
+            <p>Account #: @AccountNumber</p>
+        </div>
+    </div>
+
+    <!-- Tabs Section -->
+    <ul class="nav nav-tabs">
+        <li class="nav-item">
+            <a class="nav-link @(ActiveTab == "Account" ? "active" : "")" @onclick="SetTabAccount">Account</a>
+
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(ActiveTab == "Balances" ? "active" : "")" @onclick="SetTabBalances">Balances</a>
+
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(ActiveTab == "HoldSuspend" ? "active" : "")" @onclick="SetTabHoldSuspend">Hold/Suspend</a>
+
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(ActiveTab == "EntityRoles" ? "active" : "")" @onclick="SetTabEntityRoles">Entity Roles</a>
+        </li>
+    </ul>
+
+    <!-- Account Details Section -->
+    @if (ActiveTab == "Account")
+    {
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <h5>Account Details</h5>
+                <p><strong>Account:</strong> @AccountName</p>
+                <p><strong>Address:</strong> @AccountAddress</p>
+                <p><strong>Payment Method:</strong> @PaymentMethod</p>
+                <p><strong>Cancelled Policy Count:</strong> @CancelledPolicyCount</p>
+            </div>
+            <div class="col-md-6">
+                <h5>Billing Details</h5>
+                <p><strong>Bill Type:</strong> @BillType</p>
+                <p><strong>Bill To:</strong> @BillTo</p>
+                <p><strong>Billing Address:</strong> @BillingAddress</p>
+                <p><strong>Output Delivery Method:</strong> @OutputDeliveryMethod</p>
+                <p><strong>Due Day:</strong> @DueDay</p>
+            </div>
+        </div>
+    }
+
+    <!-- Transactions Table -->
+    <div class="row mt-4">
+        <div class="col">
+            <h5>Transactions</h5>
+            <div class="form-inline mb-3">
+                <label for="fromDate" class="mr-2">From Date:</label>
+                <input type="date" id="fromDate" class="form-control mr-3" @bind="FromDate" />
+                <label for="toDate" class="mr-2">To Date:</label>
+                <input type="date" id="toDate" class="form-control mr-3" @bind="ToDate" />
+                <button class="btn btn-primary" @onclick="LoadTransactions">View</button>
+            </div>
+            <table class="table table-striped table-sm">
+                <thead>
+                    <tr>
+                        <th>Policy #</th>
+                        <th>Transaction</th>
+                        <th>Entry Date</th>
+                        <th>Effective Date</th>
+                        <th>Expiry Date</th>
+                        <th>User</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (PagedTransactions.Any())
+                    {
+                        @foreach (var transaction in PagedTransactions)
+                        {
+                            <tr>
+                                <td>@transaction.POLICY_NO</td>
+                                <td>@transaction.TRANSACTION_TYPE</td>
+                                <td>@transaction.CREATED_ON?.ToShortDateString()</td>
+                                <td>@transaction.TRANSACTION_EFF_DATE.ToShortDateString()</td>
+                                <td>@transaction.TRANSACTION_EXPIRY_DATE?.ToShortDateString()</td>
+                                <td>@transaction.CREATED_BY</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center">No transactions found.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <!-- Pagination Controls -->
+            <div class="d-flex justify-content-between">
+                <button class="btn btn-secondary" @onclick="PreviousPage" disabled="@(!CanGoToPreviousPage)">Previous</button>
+                <button class="btn btn-secondary" @onclick="NextPage" disabled="@(!CanGoToNextPage)">Next</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string AccountNumber { get; set; }
+
+    private string AccountName;
+    private string AccountAddress;
+    private string BillingAddress;
+    private string PaymentMethod;
+    private int CancelledPolicyCount;
+    private string BillType;
+    private string BillTo;
+    private string OutputDeliveryMethod;
+    private int DueDay;
+
+    private void SetTab(string tab) => ActiveTab = tab;
+    private void SetTabAccount() => SetTab("Account");
+    private void SetTabBalances() => SetTab("Balances");
+    private void SetTabHoldSuspend() => SetTab("HoldSuspend");
+    private void SetTabEntityRoles() => SetTab("EntityRoles");
+    private string ActiveTab = "Account";
+
+    private DateTime FromDate = DateTime.Now.AddMonths(-6); // Default to 6 months ago
+    private DateTime ToDate = DateTime.Now; // Default to today
+
+    private int CurrentPage = 1;
+    private int PageSize = 50;
+    private List<TransactionDto> PagedTransactions => Transactions
+        .Skip((CurrentPage - 1) * PageSize)
+        .Take(PageSize)
+        .ToList();
+
+    private bool CanGoToPreviousPage => CurrentPage > 1;
+    private bool CanGoToNextPage => (CurrentPage * PageSize) < Transactions.Count;
+
+    private List<TransactionDto> Transactions = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAccountDetails();
+    }
+
+    private async Task LoadAccountDetails()
+    {
+        try
+        {
+            var client = HttpClientFactory.CreateClient("BillingDataApi");
+
+            // Fetch account details
+            var accountDetails = await client.GetFromJsonAsync<AccountDetailsDto>($"api/EntityRegister/details/dashboard/{AccountNumber}");
+
+            if (accountDetails != null)
+            {
+                AccountName = !string.IsNullOrWhiteSpace(accountDetails.DOING_BUSINESS_AS_NAME)
+                    ? accountDetails.DOING_BUSINESS_AS_NAME
+                    : accountDetails.FULL_NAME;
+
+                // Fetch addresses using SOURCE_SYSTEM_ENTITY_CODE
+                var addresses = await client.GetFromJsonAsync<List<ENTITY_ADDRESS_INFO>>($"api/EntityAddress/addresses/{AccountNumber}");
+
+                if (addresses != null && addresses.Any())
+                {
+                    // Assign physical address
+                    var physicalAddress = addresses.FirstOrDefault(a => a.ADDRESS_TYPE == "PHYSICAL");
+                    if (physicalAddress != null)
+                    {
+                        AccountAddress = $"{physicalAddress.ADDRESS1} {physicalAddress.ADDRESS2}, {physicalAddress.CITY}, {physicalAddress.STATE} {physicalAddress.ZIP_CODE}";
+                    }
+
+                    // Assign mailing address
+                    var mailingAddress = addresses.FirstOrDefault(a => a.ADDRESS_TYPE == "MAILING");
+                    if (mailingAddress != null)
+                    {
+                        BillingAddress = $"{mailingAddress.ADDRESS1} {mailingAddress.ADDRESS2}, {mailingAddress.CITY}, {mailingAddress.STATE} {mailingAddress.ZIP_CODE}";
+                    }
+                }
+
+                PaymentMethod = "Check"; // Placeholder, update if needed
+                CancelledPolicyCount = 0; // Placeholder, update if needed
+                BillType = "Account Bill"; // Placeholder, update if needed
+                BillTo = accountDetails.FULL_NAME;
+                OutputDeliveryMethod = "Mail"; // Placeholder, update if needed
+                DueDay = 1; // Placeholder, update if needed
+
+                LoadTransactions();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading account details: {ex.Message}");
+        }
+    }
+
+    private async Task LoadTransactions()
+    {
+        try
+        {
+            var client = HttpClientFactory.CreateClient("BillingDataApi");
+
+            // Fetch transactions using SOURCE_SYSTEM_ENTITY_CODE and date range
+            Transactions = await client.GetFromJsonAsync<List<TransactionDto>>(
+                $"api/Transactions/byaccountnumber/{AccountNumber}?fromDate={FromDate:yyyy-MM-dd}&toDate={ToDate:yyyy-MM-dd}");
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading transactions: {ex.Message}");
+        }
+    }
+
+    private void NextPage()
+    {
+        if (CanGoToNextPage)
+        {
+            CurrentPage++;
+        }
+    }
+
+    private void PreviousPage()
+    {
+        if (CanGoToPreviousPage)
+        {
+            CurrentPage--;
+        }
+    }
+}
