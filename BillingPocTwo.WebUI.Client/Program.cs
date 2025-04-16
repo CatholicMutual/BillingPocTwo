@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Net.Http;
 using System;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
+using Blazored.SessionStorage;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -21,7 +22,7 @@ builder.Services.AddHttpClient("BillingPocTwo.ServerAPI", client => client.BaseA
     .AddHttpMessageHandler<BaseAddressAuthorizationMessageHandler>();
 
 // Add Blazored LocalStorage
-builder.Services.AddBlazoredLocalStorage();
+builder.Services.AddBlazoredSessionStorage();
 
 // Add authentication and authorization
 builder.Services.AddApiAuthorization();

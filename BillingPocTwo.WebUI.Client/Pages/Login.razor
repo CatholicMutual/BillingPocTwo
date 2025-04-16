@@ -3,7 +3,7 @@
 @inject IHttpClientFactory HttpClientFactory
 @inject HttpClient Http
 @inject NavigationManager Navigation
-@inject ILocalStorageService LocalStorage
+@inject ISessionStorageService SessionStorage
 @inject AuthenticationStateProvider AuthStateProvider
 @inject UserState UserState
 
@@ -65,7 +65,7 @@
 
             if (tokenResponse != null)
             {
-                await LocalStorage.SetItemAsync("authToken", tokenResponse.AccessToken);
+                await SessionStorage.SetItemAsync("AccessToken", tokenResponse.AccessToken);
                 var claims = JwtParser.ParseClaimsFromJwt(tokenResponse.AccessToken);
 
                 // Update UserState directly

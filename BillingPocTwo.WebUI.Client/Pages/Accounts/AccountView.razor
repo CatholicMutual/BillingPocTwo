@@ -130,7 +130,7 @@
     private void SetTabEntityRoles() => SetTab("EntityRoles");
     private string ActiveTab = "Account";
 
-    private DateTime FromDate = DateTime.Now.AddMonths(-6); // Default to 6 months ago
+    private DateTime FromDate = DateTime.Now.AddYears(-5); // Default to 6 months ago
     private DateTime ToDate = DateTime.Now; // Default to today
 
     private int CurrentPage = 1;
@@ -205,6 +205,9 @@
     {
         try
         {
+
+            CurrentPage = 1;
+
             var client = HttpClientFactory.CreateClient("BillingDataApi");
 
             // Fetch transactions using SOURCE_SYSTEM_ENTITY_CODE and date range

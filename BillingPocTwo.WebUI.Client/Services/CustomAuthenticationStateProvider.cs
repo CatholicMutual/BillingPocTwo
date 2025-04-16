@@ -1,5 +1,5 @@
 ﻿using BillingPocTwo.Shared.Entities.Auth;
-using Blazored.LocalStorage;
+using Blazored.SessionStorage;
 using Microsoft.AspNetCore.Components.Authorization;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -13,22 +13,22 @@ namespace BillingPocTwo.WebUI.Client.Services
 public class CustomAuthenticationStateProvider : AuthenticationStateProvider
     {
         private readonly IHttpClientFactory _httpClientFactory; // Added IHttpClientFactory
-        private readonly ILocalStorageService _localStorage;
+        private readonly ISessionStorageService _sessionStorage;
         private readonly UserState _userState;
         private readonly HttpClient _httpClient;
         private ClaimsPrincipal _currentUser = new ClaimsPrincipal(new ClaimsIdentity());
 
-        public CustomAuthenticationStateProvider(IHttpClientFactory httpClientFactory, ILocalStorageService localStorage, UserState userState, HttpClient httpClient)
+        public CustomAuthenticationStateProvider(IHttpClientFactory httpClientFactory, ISessionStorageService sessionStorage, UserState userState, HttpClient httpClient)
         {
             _httpClientFactory = httpClientFactory; 
-            _localStorage = localStorage;
+            _sessionStorage = sessionStorage;
             _userState = userState;
             _httpClient = httpClient;
         }
 
         public override async Task<AuthenticationState> GetAuthenticationStateAsync()
         {
-            var token = await _localStorage.GetItemAsync<string>("authToken");
+            var token = await _sessionStorage.GetItemAsync<string>("AccessToken");
 
             if (string.IsNullOrWhiteSpace(token))
             {
@@ -69,7 +69,7 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
             await client.PostAsync("api/auth/logout", null); // Relative URI works because BaseAddress is set
 
             // Clear local storage and notify state change
-            await _localStorage.RemoveItemAsync("authToken");
+            await _sessionStorage.RemoveItemAsync("AccessToken");
             NotifyUserLogout();
         }
     }
