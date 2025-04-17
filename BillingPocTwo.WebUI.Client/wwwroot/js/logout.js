@@ -3,7 +3,7 @@
 });
 
 window.onbeforeunload = async () => {
-    const token = sessionStorage.getItem("authToken");
+    const token = sessionStorage.getItem("AccessToken");
     if (token) {
         await fetch("/api/logout", {
             method: "POST",

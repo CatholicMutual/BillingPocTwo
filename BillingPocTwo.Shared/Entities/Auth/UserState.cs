@@ -2,11 +2,12 @@
 {
     public class UserState
     {
-        public bool IsAdmin { get; set; } = false;
-        public bool IsUser { get; set; } = false;
-        public bool IsAuthenticated { get; set; } = false;
-        public string? Email { get; set; }
-        public string? FirstName { get; set; }
-        public string? LastName { get; set; }
+        public bool IsAuthenticated { get; set; }
+        public string Email { get; set; }
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
+        public List<string> Roles { get; set; } = new List<string>(); // Store roles as strings (ROLE_ID or ROLE_DESCRIPTION)
+        public bool IsAdmin { get; set; }
+        public bool IsUser { get; set; }
     }
 }

@@ -3,6 +3,8 @@
 @inject HttpClient Http
 @inject IHttpClientFactory HttpClientFactory
 
+@attribute [Authorize]
+
 <h3>Account</h3>
 
 <div class="container-fluid">
@@ -69,12 +71,24 @@
             <table class="table table-striped table-sm">
                 <thead>
                     <tr>
-                        <th>Policy #</th>
-                        <th>Transaction</th>
-                        <th>Entry Date</th>
-                        <th>Effective Date</th>
-                        <th>Expiry Date</th>
-                        <th>User</th>
+                        <th @onclick="() => SortTransactions(nameof(TransactionDto.POLICY_NO))" style="cursor: pointer;">
+                            Policy # @RenderSortIcon(nameof(TransactionDto.POLICY_NO))
+                        </th>
+                        <th @onclick="() => SortTransactions(nameof(TransactionDto.TRANSACTION_TYPE))" style="cursor: pointer;">
+                            Transaction @RenderSortIcon(nameof(TransactionDto.TRANSACTION_TYPE))
+                        </th>
+                        <th @onclick="() => SortTransactions(nameof(TransactionDto.CREATED_ON))" style="cursor: pointer;">
+                            Entry Date @RenderSortIcon(nameof(TransactionDto.CREATED_ON))
+                        </th>
+                        <th @onclick="() => SortTransactions(nameof(TransactionDto.TRANSACTION_EFF_DATE))" style="cursor: pointer;">
+                            Effective Date @RenderSortIcon(nameof(TransactionDto.TRANSACTION_EFF_DATE))
+                        </th>
+                        <th @onclick="() => SortTransactions(nameof(TransactionDto.TRANSACTION_EXPIRY_DATE))" style="cursor: pointer;">
+                            Expiry Date @RenderSortIcon(nameof(TransactionDto.TRANSACTION_EXPIRY_DATE))
+                        </th>
+                        <th @onclick="() => SortTransactions(nameof(TransactionDto.CREATED_BY))" style="cursor: pointer;">
+                            User @RenderSortIcon(nameof(TransactionDto.CREATED_BY))
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
@@ -100,6 +114,7 @@
                     }
                 </tbody>
             </table>
+
 
             <!-- Pagination Controls -->
             <div class="d-flex justify-content-between">
@@ -135,13 +150,12 @@
 
     private int CurrentPage = 1;
     private int PageSize = 50;
-    private List<TransactionDto> PagedTransactions => Transactions
-        .Skip((CurrentPage - 1) * PageSize)
-        .Take(PageSize)
-        .ToList();
 
     private bool CanGoToPreviousPage => CurrentPage > 1;
     private bool CanGoToNextPage => (CurrentPage * PageSize) < Transactions.Count;
+
+    private string SortColumn = nameof(TransactionDto.CREATED_ON); // Default sort column
+    private bool SortAscending = true; // Default sort order
 
     private List<TransactionDto> Transactions = new();
 
@@ -237,4 +251,34 @@
             CurrentPage--;
         }
     }
+
+    private void SortTransactions(string column)
+    {
+        if (SortColumn == column)
+        {
+            // Toggle sort order if the same column is clicked
+            SortAscending = !SortAscending;
+        }
+        else
+        {
+            // Set new column and default to ascending order
+            SortColumn = column;
+            SortAscending = true;
+        }
+    }
+
+    private List<TransactionDto> PagedTransactions => Transactions
+        .OrderByDynamic(SortColumn, SortAscending)
+        .Skip((CurrentPage - 1) * PageSize)
+        .Take(PageSize)
+        .ToList();
+
+    private RenderFragment RenderSortIcon(string column) => builder =>
+    {
+        if (SortColumn == column)
+        {
+            var icon = SortAscending ? "▲" : "▼"; // Up or down arrow
+            builder.AddContent(0, icon);
+        }
+    };
 }

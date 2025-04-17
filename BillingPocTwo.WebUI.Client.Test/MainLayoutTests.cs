@@ -13,6 +13,7 @@ using BillingPocTwo.Shared.Entities.Auth;
 using Moq.Protected;
 using System.Net;
 using System.Net.Http;
+using Blazored.SessionStorage;
 
 namespace BillingPocTwo.WebUI.Client.Test
 {
@@ -34,7 +35,7 @@ namespace BillingPocTwo.WebUI.Client.Test
                 Email = "user@example.com"
             };
 
-            var localStorageMock = new Mock<ILocalStorageService>();
+            var sessionStorageMock = new Mock<ISessionStorageService>();
             var httpClient = CreateMockHttpClient();
 
             _httpClientFactoryMock
@@ -43,7 +44,7 @@ namespace BillingPocTwo.WebUI.Client.Test
 
             var customAuthStateProvider = new CustomAuthenticationStateProvider(
                 _httpClientFactoryMock.Object, // Use the initialized mock
-                localStorageMock.Object,
+                sessionStorageMock.Object,
                 userState,
                 httpClient
             );
@@ -100,12 +101,12 @@ namespace BillingPocTwo.WebUI.Client.Test
                 Email = "user@example.com"
             };
 
-            var localStorageMock = new Mock<ILocalStorageService>();
+            var sessionStorageMock = new Mock<ISessionStorageService>();
             var httpClient = CreateMockHttpClient();
 
             var customAuthStateProvider = new CustomAuthenticationStateProvider(
                 _httpClientFactoryMock.Object, // Use the initialized mock
-                localStorageMock.Object,
+                sessionStorageMock.Object,
                 userState,
                 httpClient
             );

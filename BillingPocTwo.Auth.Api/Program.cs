@@ -9,12 +9,15 @@ using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Database
+// Configure Databases
 builder.Services.AddDbContext<UserDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("UserDatabase")));
+builder.Services.AddDbContext<UserRoleDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("BillingDatabase")));
 
-// Register IUserDbContext
+// Register Db Contexts
 builder.Services.AddScoped<IUserDbContext>(provider => provider.GetService<UserDbContext>());
+builder.Services.AddScoped<IUserRoleDbContext>(provider => provider.GetService<UserRoleDbContext>());
 
 // Add services to the container.
 
@@ -24,6 +27,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 // Configure Identity
 builder.Services.AddIdentity<IdentityUser, IdentityRole>()
     .AddEntityFrameworkStores<UserDbContext>()
+    .AddEntityFrameworkStores<UserRoleDbContext>()
     .AddDefaultTokenProviders();
 
 // Configure JWT Authentication

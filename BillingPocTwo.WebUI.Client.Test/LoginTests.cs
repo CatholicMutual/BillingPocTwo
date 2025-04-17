@@ -19,12 +19,13 @@ using BillingPocTwo.Shared.Entities;
 using Bunit.TestDoubles;
 using BillingPocTwo.Shared.Entities.Auth;
 using System.Net.Http;
+using Blazored.SessionStorage;
 
 namespace BillingPocTwo.WebUI.Client.Test
 {
     public class LoginTests : TestContext
     {
-        private readonly Mock<ILocalStorageService> _localStorageMock;
+        private readonly Mock<ISessionStorageService> _sessionStorageMock;
         private readonly Mock<AuthenticationStateProvider> _authStateProviderMock;
         private readonly Mock<HttpMessageHandler> _httpMessageHandlerMock;
         private readonly HttpClient _httpClient;
@@ -32,7 +33,7 @@ namespace BillingPocTwo.WebUI.Client.Test
 
         public LoginTests()
         {
-            _localStorageMock = new Mock<ILocalStorageService>();
+            _sessionStorageMock = new Mock<ISessionStorageService>();
             var userState = new UserState();
             _httpMessageHandlerMock = new Mock<HttpMessageHandler>();
             _httpClientFactoryMock = new Mock<IHttpClientFactory>();
@@ -51,14 +52,14 @@ namespace BillingPocTwo.WebUI.Client.Test
 
             var customAuthStateProvider = new CustomAuthenticationStateProvider(
                 _httpClientFactoryMock.Object, // Pass the mocked IHttpClientFactory
-                _localStorageMock.Object,
+                _sessionStorageMock.Object,
                 userState,
                 _httpClient
             );
 
             Services.AddSingleton(_httpClient);
             Services.AddSingleton(_httpClientFactoryMock.Object);
-            Services.AddSingleton(_localStorageMock.Object);
+            Services.AddSingleton(_sessionStorageMock.Object);
             Services.AddSingleton<AuthenticationStateProvider>(customAuthStateProvider);
             Services.AddSingleton(userState);
             Services.AddAuthorizationCore();
@@ -150,8 +151,8 @@ namespace BillingPocTwo.WebUI.Client.Test
 
             // Assert
             cut.WaitForState(() => !cut.Instance.isLoading);
-            _localStorageMock.Verify(x =>
-                x.SetItemAsync("authToken", It.Is<string>(token => !string.IsNullOrWhiteSpace(token)), CancellationToken.None),
+            _sessionStorageMock.Verify(x =>
+                x.SetItemAsync("AccessToken", It.Is<string>(token => !string.IsNullOrWhiteSpace(token)), CancellationToken.None),
                 Times.Once);
             var customAuthStateProvider = Services.GetRequiredService<AuthenticationStateProvider>() as CustomAuthenticationStateProvider;
             Assert.NotNull(customAuthStateProvider);

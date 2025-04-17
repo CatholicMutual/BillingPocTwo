@@ -1,6 +1,8 @@
 ﻿@inject HttpClient Http
 @inject IHttpClientFactory HttpClientFactory
 
+@attribute [Authorize]
+
 <h3>Entity Register</h3>
 
 <div class="filter-bar-horizontal">
@@ -42,7 +44,7 @@ else
                     <td>@item.DOING_BUSINESS_AS_NAME</td>
                     <td>@item.ENTITY_TYPE</td>
                     <td>
-                        <a href="#" @onclick="() => ShowEntityDetails(item.SYSTEM_ENTITY_CODE)" @onclick:preventDefault>
+                        <a href="account-view/@item.SOURCE_SYSTEM_ENTITY_CODE">
                             @item.SOURCE_SYSTEM_ENTITY_CODE
                         </a>
                     </td>

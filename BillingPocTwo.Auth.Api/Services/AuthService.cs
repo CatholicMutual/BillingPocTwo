@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Data;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -13,11 +14,28 @@ using System.Threading.Tasks;
 
 namespace BillingPocTwo.Auth.Api.Services
 {
-    public class AuthService(UserDbContext context, IConfiguration configuration) : IAuthService
+    public class AuthService(UserDbContext context, UserRoleDbContext rolesContext, IConfiguration configuration) : IAuthService
     {
+        private readonly UserDbContext context = context;
+        private readonly UserRoleDbContext rolesContext = rolesContext;
+        private readonly IConfiguration configuration = configuration;
+
         public async Task<TokenResponseDto?> LoginAsync(LoginDto request)
         {
-            var user = await context.Users.Include(u => u.Roles).FirstOrDefaultAsync(u => u.Email == request.Email);
+            var user = await context.Users
+                .Include(u => u.Roles)
+                .FirstOrDefaultAsync(u => u.Email == request.Email);
+
+            if (user != null)
+            {
+                // Fetch roles from ROLE_MASTER to ensure they are valid and not locked
+                var validRoles = await rolesContext.RoleMasters
+                    .Where(r => user.Roles.Select(ur => ur.ROLE_ID).Contains(r.ROLE_ID) && r.IS_LOCKED != "Y")
+                    .ToListAsync();
+
+                // Update the user's roles to only include valid roles
+                user.Roles = validRoles;
+            }
 
             if ((user is null) || (new PasswordHasher<User>().VerifyHashedPassword(user, user.PasswordHash, request.Password) == PasswordVerificationResult.Failed))
             {
@@ -68,8 +86,12 @@ namespace BillingPocTwo.Auth.Api.Services
                 CreatedAt = DateTime.UtcNow
             };
 
-            var roles = await context.UserRoles.Where(r => request.Roles.Contains(r.Name)).ToListAsync();
-            user.Roles = roles;
+            // Fetch roles from ROLE_MASTER
+            var roles = await rolesContext.RoleMasters
+                .Where(r => request.Roles.Contains(r.ROLE_ID) && r.IS_LOCKED != "Y")
+                .ToListAsync();
+
+            user.Roles = roles.Select(r => new ROLE_MASTER { ROLE_DESCRIPTION = r.ROLE_DESCRIPTION }).ToList();
 
             context.Users.Add(user);
             await context.SaveChangesAsync();
@@ -90,8 +112,12 @@ namespace BillingPocTwo.Auth.Api.Services
                 return false;
             }
 
-            var roles = await context.UserRoles.Where(r => newRoles.Contains(r.Name)).ToListAsync();
-            user.Roles = roles;
+            // Fetch roles from ROLE_MASTER
+            var roles = await rolesContext.RoleMasters
+                .Where(r => newRoles.Contains(r.ROLE_ID) && r.IS_LOCKED != "Y")
+                .ToListAsync();
+
+            user.Roles = roles.Select(r => new ROLE_MASTER { ROLE_DESCRIPTION = r.ROLE_DESCRIPTION }).ToList();
 
             await context.SaveChangesAsync();
             return true;
@@ -105,6 +131,27 @@ namespace BillingPocTwo.Auth.Api.Services
             context.Users.Update(user);
             var result = await context.SaveChangesAsync();
             return result > 0;
+        }
+
+        public async Task<List<ROLE_MASTER>> GetAllRolesAsync()
+        {
+            return await rolesContext.RoleMasters
+                .ToListAsync();
+        }
+
+        public async Task<List<string>> GetRoleDescriptionsAsync(List<string> roleIds)
+        {
+            return await rolesContext.RoleMasters
+                .Where(r => roleIds.Contains(r.ROLE_ID))
+                .Select(r => r.ROLE_DESCRIPTION)
+                .ToListAsync();
+        }
+
+        public async Task<List<ROLE_MASTER>> GetRolesByIdsAsync(List<string> roleIds)
+        {
+            return await rolesContext.RoleMasters
+                .Where(r => roleIds.Contains(r.ROLE_ID))
+                .ToListAsync();
         }
 
         public async Task<bool> DeleteUserAsync(string currentUserEmail, string email)
@@ -136,29 +183,36 @@ namespace BillingPocTwo.Auth.Api.Services
 
         private async Task<string> CreateToken(User user)
         {
-            var userRoles = user.Roles.Select(r => r.Name).ToList();
+            var userRoles = user.Roles.Select(r => r.ROLE_DESCRIPTION).ToList();
+
+            // Fetch role descriptions from ROLE_MASTER
+            var roleDescriptions = await rolesContext.RoleMasters
+                .Where(r => userRoles.Contains(r.ROLE_ID))
+                .Select(r => r.ROLE_DESCRIPTION)
+                .ToListAsync();
 
             var claims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.Email, user.Email),
-                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                    new Claim("ChangePasswordOnFirstLogin", user.ChangePasswordOnFirstLogin.ToString())
-                };
+            {
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim("ChangePasswordOnFirstLogin", user.ChangePasswordOnFirstLogin.ToString())
+            };
 
-            claims.AddRange(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
+            var roleClaims = user.Roles.Select(r => new Claim(ClaimTypes.Role, r.ROLE_ID)).ToList();
+            claims.AddRange(roleClaims);
 
             var key = new SymmetricSecurityKey(
-                    Encoding.UTF8.GetBytes(configuration.GetValue<string>("JwtSettings:Secret")!));
+                Encoding.UTF8.GetBytes(configuration.GetValue<string>("JwtSettings:Secret")!));
 
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512);
 
             var tokenDescriptor = new JwtSecurityToken(
-                    issuer: configuration.GetValue<string>("JwtSettings:Issuer"),
-                    audience: configuration.GetValue<string>("JwtSettings:Audience"),
-                    claims: claims,
-                    expires: DateTime.Now.AddMinutes(30),
-                    signingCredentials: creds
-                );
+                issuer: configuration.GetValue<string>("JwtSettings:Issuer"),
+                audience: configuration.GetValue<string>("JwtSettings:Audience"),
+                claims: claims,
+                expires: DateTime.Now.AddMinutes(30),
+                signingCredentials: creds
+            );
 
             return new JwtSecurityTokenHandler().WriteToken(tokenDescriptor);
         }
@@ -192,14 +246,14 @@ namespace BillingPocTwo.Auth.Api.Services
 
         public async Task<int?> GetRoleIdByNameAsync(string roleName)
         {
-            var role = await context.UserRoles.FirstOrDefaultAsync(r => r.Name == roleName);
-            return role?.Id;
+            var role = await rolesContext.RoleMasters.FirstOrDefaultAsync(r => r.ROLE_ID == roleName);
+            return role?.SEQ_ROLE_MASTER;
         }
 
         public async Task<string?> GetRoleNameByIdAsync(int userRoleId)
         {
-            var role = await context.UserRoles.FirstOrDefaultAsync(r => r.Id == userRoleId);
-            return role?.Name;
+            var role = await rolesContext.RoleMasters.FirstOrDefaultAsync(r => r.SEQ_ROLE_MASTER == userRoleId);
+            return role?.ROLE_ID;
         }
     }
 }

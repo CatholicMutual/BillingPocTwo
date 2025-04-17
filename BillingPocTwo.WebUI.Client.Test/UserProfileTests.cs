@@ -18,18 +18,19 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using System.Text.Json;
 using BillingPocTwo.Shared.Entities.Auth;
+using Blazored.SessionStorage;
 
 namespace BillingPocTwo.WebUI.Client.Test
 {
     public class UserProfileTests : TestContext
     {
-        private readonly Mock<ILocalStorageService> _localStorageMock;
+        private readonly Mock<ISessionStorageService> _sessionStorageMock;
         private readonly Mock<HttpMessageHandler> _httpMessageHandlerMock;
         private readonly HttpClient _httpClient;
 
         public UserProfileTests()
         {
-            _localStorageMock = new Mock<ILocalStorageService>();
+            _sessionStorageMock = new Mock<ISessionStorageService>();
             _httpMessageHandlerMock = new Mock<HttpMessageHandler>();
 
             _httpClient = new HttpClient(_httpMessageHandlerMock.Object)
@@ -43,7 +44,7 @@ namespace BillingPocTwo.WebUI.Client.Test
                 .Setup(factory => factory.CreateClient(It.IsAny<string>()))
                 .Returns(_httpClient);
 
-            var customAuthStateProvider = new CustomAuthenticationStateProvider(httpClientFactoryMock.Object, _localStorageMock.Object, userState, _httpClient);
+            var customAuthStateProvider = new CustomAuthenticationStateProvider(httpClientFactoryMock.Object, _sessionStorageMock.Object, userState, _httpClient);
             var fakeAuthStateProvider = new Mock<AuthenticationStateProvider>();
             var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity(new[]
             {
@@ -52,7 +53,7 @@ namespace BillingPocTwo.WebUI.Client.Test
 
             Services.AddSingleton<HttpClient>(_httpClient);
             Services.AddSingleton<IHttpClientFactory>(httpClientFactoryMock.Object);
-            Services.AddSingleton(_localStorageMock.Object);
+            Services.AddSingleton(_sessionStorageMock.Object);
             Services.AddSingleton<AuthenticationStateProvider>(customAuthStateProvider);
             Services.AddSingleton(userState);
             Services.AddAuthorizationCore();
@@ -83,8 +84,8 @@ namespace BillingPocTwo.WebUI.Client.Test
         public async Task UserProfile_ShouldDisplayErrorMessage_WhenUserNotAuthenticated()
         {
             // Arrange
-            _localStorageMock
-                .Setup(x => x.GetItemAsync<string>("authToken", It.IsAny<CancellationToken>()))
+            _sessionStorageMock
+                .Setup(x => x.GetItemAsync<string>("AccessToken", It.IsAny<CancellationToken>()))
                 .ReturnsAsync((string)null); // No token
 
             var cut = RenderComponent<UserProfile>();
@@ -105,8 +106,8 @@ namespace BillingPocTwo.WebUI.Client.Test
         {
             // Arrange
             var token = GenerateJwtTokenWithoutEmail();
-            _localStorageMock
-                .Setup(x => x.GetItemAsync<string>("authToken", It.IsAny<CancellationToken>()))
+            _sessionStorageMock
+                .Setup(x => x.GetItemAsync<string>("AccessToken", It.IsAny<CancellationToken>()))
                 .ReturnsAsync(token);
 
             // Optionally prevent the HTTP call by mocking a blank user state (simulate no email in claims)
@@ -148,8 +149,8 @@ namespace BillingPocTwo.WebUI.Client.Test
         {
             // Arrange
             var token = GenerateValidJwtToken("user@example.com");
-            _localStorageMock
-                .Setup(x => x.GetItemAsync<string>("authToken", It.IsAny<CancellationToken>()))
+            _sessionStorageMock
+                .Setup(x => x.GetItemAsync<string>("AccessToken", It.IsAny<CancellationToken>()))
                 .ReturnsAsync(token);
 
             var userProfile = new UserProfileDto
@@ -203,8 +204,8 @@ namespace BillingPocTwo.WebUI.Client.Test
         {
             // Arrange
             var token = GenerateValidJwtToken("user@example.com");
-            _localStorageMock
-                .Setup(x => x.GetItemAsync<string>("authToken", It.IsAny<CancellationToken>()))
+            _sessionStorageMock
+                .Setup(x => x.GetItemAsync<string>("AccessToken", It.IsAny<CancellationToken>()))
                 .ReturnsAsync(token);
 
             var fakeAuthStateProvider = new Mock<AuthenticationStateProvider>();

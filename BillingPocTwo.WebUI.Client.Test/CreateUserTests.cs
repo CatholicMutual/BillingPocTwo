@@ -17,18 +17,19 @@ using System.Text;
 using BillingPocTwo.Shared.Entities;
 using Bunit.TestDoubles;
 using BillingPocTwo.Shared.Entities.Auth;
+using Blazored.SessionStorage;
 
 namespace BillingPocTwo.WebUI.Client.Test
 {
     public class CreateUserTests : TestContext
     {
-        private readonly Mock<ILocalStorageService> _localStorageMock;
+        private readonly Mock<ISessionStorageService> _sessionStorageMock;
         private readonly Mock<HttpMessageHandler> _httpMessageHandlerMock;
         private readonly HttpClient _httpClient;
 
         public CreateUserTests()
         {
-            _localStorageMock = new Mock<ILocalStorageService>();
+            _sessionStorageMock = new Mock<ISessionStorageService>();
             _httpMessageHandlerMock = new Mock<HttpMessageHandler>();
 
             _httpClient = new HttpClient(_httpMessageHandlerMock.Object)
@@ -40,11 +41,11 @@ namespace BillingPocTwo.WebUI.Client.Test
             var httpClientFactoryMock = new Mock<IHttpClientFactory>();
             httpClientFactoryMock.Setup(factory => factory.CreateClient(It.IsAny<string>())).Returns(_httpClient);
 
-            var customAuthStateProvider = new CustomAuthenticationStateProvider(httpClientFactoryMock.Object, _localStorageMock.Object, userState, _httpClient);
+            var customAuthStateProvider = new CustomAuthenticationStateProvider(httpClientFactoryMock.Object, _sessionStorageMock.Object, userState, _httpClient);
 
             Services.AddSingleton<HttpClient>(_httpClient);
             Services.AddSingleton<IHttpClientFactory>(httpClientFactoryMock.Object);
-            Services.AddSingleton(_localStorageMock.Object);
+            Services.AddSingleton(_sessionStorageMock.Object);
             Services.AddSingleton<AuthenticationStateProvider>(customAuthStateProvider);
             Services.AddSingleton(userState);
             Services.AddAuthorizationCore();
@@ -99,8 +100,8 @@ namespace BillingPocTwo.WebUI.Client.Test
                 new UserRole { Name = "User" }
             };
 
-            _localStorageMock
-                .Setup(x => x.GetItemAsync<string>("authToken", It.IsAny<CancellationToken>()))
+            _sessionStorageMock
+                .Setup(x => x.GetItemAsync<string>("AccessToken", It.IsAny<CancellationToken>()))
                 .ReturnsAsync("fake-jwt-token");
 
             _httpMessageHandlerMock
@@ -152,8 +153,8 @@ namespace BillingPocTwo.WebUI.Client.Test
                     Content = new StringContent("Failed to load roles")
                 });
 
-            _localStorageMock
-                .Setup(x => x.GetItemAsync<string>("authToken", It.IsAny<CancellationToken>()))
+            _sessionStorageMock
+                .Setup(x => x.GetItemAsync<string>("AccessToken", It.IsAny<CancellationToken>()))
                 .ReturnsAsync("mock-token");
 
             // Act
@@ -193,8 +194,8 @@ namespace BillingPocTwo.WebUI.Client.Test
                 });
 
             // Mock the authentication token
-            _localStorageMock
-                .Setup(x => x.GetItemAsync<string>("authToken", It.IsAny<CancellationToken>()))
+            _sessionStorageMock
+                .Setup(x => x.GetItemAsync<string>("AccessToken", It.IsAny<CancellationToken>()))
                 .ReturnsAsync("mock-token");
 
             var createUserDto = new CreateUserDto
@@ -251,8 +252,8 @@ namespace BillingPocTwo.WebUI.Client.Test
             };
 
             // Mock token so component can proceed
-            _localStorageMock
-                .Setup(x => x.GetItemAsync<string>("authToken", It.IsAny<CancellationToken>()))
+            _sessionStorageMock
+                .Setup(x => x.GetItemAsync<string>("AccessToken", It.IsAny<CancellationToken>()))
                 .ReturnsAsync("mock-token");
 
             var responseMessage = new HttpResponseMessage(HttpStatusCode.BadRequest)

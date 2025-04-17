@@ -12,6 +12,8 @@ namespace BillingPocTwo.Auth.Api.Services
         Task<bool> DeleteUserAsync(string currentUserEmail, string email);
         Task<bool> ChangeUserRoleAsync(string currentUserEmail, string email, List<string> newRoles);
         Task<bool> UpdateUserAsync(User user, string modifiedBy);
-
+        Task<List<ROLE_MASTER>> GetAllRolesAsync();
+        Task<List<string>> GetRoleDescriptionsAsync(List<string> roleIds);
+        Task<List<ROLE_MASTER>> GetRolesByIdsAsync(List<string> roleIds);
     }
 }

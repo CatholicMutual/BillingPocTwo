@@ -16,18 +16,19 @@ using System.Text;
 using BillingPocTwo.Shared.Entities.Auth;
 using BillingPocTwo.WebUI.Client.Services;
 using Microsoft.AspNetCore.Components.Authorization;
+using Blazored.SessionStorage;
 
 namespace BillingPocTwo.WebUI.Client.Test
 {
     public class ChangePasswordTests : TestContext
     {
-        private readonly Mock<ILocalStorageService> _localStorageMock;
+        private readonly Mock<ISessionStorageService> _sessionStorageMock;
         private readonly Mock<HttpMessageHandler> _httpMessageHandlerMock;
         private readonly HttpClient _httpClient;
 
         public ChangePasswordTests()
         {
-            _localStorageMock = new Mock<ILocalStorageService>();
+            _sessionStorageMock = new Mock<ISessionStorageService>();
             _httpMessageHandlerMock = new Mock<HttpMessageHandler>();
 
             // ? Create HttpClient using the already initialized _httpMessageHandlerMock
@@ -43,13 +44,13 @@ namespace BillingPocTwo.WebUI.Client.Test
 
             var customAuthStateProvider = new CustomAuthenticationStateProvider(
                 httpClientFactoryMock.Object,
-                _localStorageMock.Object,
+                _sessionStorageMock.Object,
                 userState,
                 _httpClient);
 
             Services.AddSingleton<HttpClient>(_httpClient);
             Services.AddSingleton<IHttpClientFactory>(httpClientFactoryMock.Object);
-            Services.AddSingleton(_localStorageMock.Object);
+            Services.AddSingleton(_sessionStorageMock.Object);
             Services.AddSingleton<AuthenticationStateProvider>(customAuthStateProvider);
             Services.AddSingleton(userState);
             Services.AddAuthorizationCore();
@@ -75,8 +76,8 @@ namespace BillingPocTwo.WebUI.Client.Test
         public async Task ChangePassword_ShouldDisplayErrorMessage_WhenUserNotAuthenticated()
         {
             // Arrange
-            _localStorageMock
-                .Setup(x => x.GetItemAsync<string>("authToken", It.IsAny<CancellationToken>()))
+            _sessionStorageMock
+                .Setup(x => x.GetItemAsync<string>("AccessToken", It.IsAny<CancellationToken>()))
                 .ReturnsAsync((string)null); // No token
 
             var cut = RenderComponent<ChangePassword>();
@@ -97,8 +98,8 @@ namespace BillingPocTwo.WebUI.Client.Test
         {
             // Arrange
             var token = GenerateJwtTokenWithoutEmail();
-            _localStorageMock
-                .Setup(x => x.GetItemAsync<string>("authToken", It.IsAny<CancellationToken>()))
+            _sessionStorageMock
+                .Setup(x => x.GetItemAsync<string>("AccessToken", It.IsAny<CancellationToken>()))
                 .ReturnsAsync(token);
 
             var cut = RenderComponent<ChangePassword>();
@@ -119,8 +120,8 @@ namespace BillingPocTwo.WebUI.Client.Test
         {
             // Arrange
             var token = GenerateValidJwtToken("user@example.com");
-            _localStorageMock
-                .Setup(x => x.GetItemAsync<string>("authToken", It.IsAny<CancellationToken>()))
+            _sessionStorageMock
+                .Setup(x => x.GetItemAsync<string>("AccessToken", It.IsAny<CancellationToken>()))
                 .ReturnsAsync(token);
 
             // Ensure mock handler correctly intercepts the request
@@ -153,8 +154,8 @@ namespace BillingPocTwo.WebUI.Client.Test
         {
             // Arrange
             var token = GenerateValidJwtToken("user@example.com");
-            _localStorageMock
-                .Setup(x => x.GetItemAsync<string>("authToken", It.IsAny<CancellationToken>()))
+            _sessionStorageMock
+                .Setup(x => x.GetItemAsync<string>("AccessToken", It.IsAny<CancellationToken>()))
                 .ReturnsAsync(token);
 
             _httpMessageHandlerMock

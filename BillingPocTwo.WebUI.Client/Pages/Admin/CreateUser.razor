@@ -5,7 +5,7 @@
 @inject HttpClient Http
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager Navigation
-@inject ILocalStorageService LocalStorage
+@inject ISessionStorageService SessionStorage
 
 <h3>Create User</h3>
 
@@ -69,7 +69,7 @@
     {
         var client = HttpClientFactory.CreateClient("AuthApi");
 
-        var token = await LocalStorage.GetItemAsync<string>("authToken");
+        var token = await SessionStorage.GetItemAsync<string>("AccessToken");
         if (string.IsNullOrEmpty(token))
         {
             message = "User is not authenticated";
@@ -100,7 +100,7 @@
 
         var client = HttpClientFactory.CreateClient("AuthApi");
 
-        var token = await LocalStorage.GetItemAsync<string>("authToken");
+        var token = await SessionStorage.GetItemAsync<string>("AccessToken");
         if (string.IsNullOrEmpty(token))
         {
             message = "User is not authenticated";

@@ -20,21 +20,38 @@ namespace BillingPocTwo.Auth.Api.Test
     {
         private readonly Mock<IAuthService> _authServiceMock;
         private readonly Mock<DbSet<User>> _usersDbSetMock;
+        private readonly Mock<DbSet<ROLE_MASTER>> _userRolesDbSetMock;
+        private readonly Mock<IUserRoleDbContext> _rolesMock;
         private readonly Mock<IUserDbContext> _contextMock;
         private readonly AuthController _controller;
 
         public AuthControllerTests()
         {
             _authServiceMock = new Mock<IAuthService>();
+
             var users = new List<User>
                 {
                     new User { Email = "test@example.com", FirstName = "John", LastName = "Doe" }
                 }.AsQueryable().BuildMockDbSet();
             _usersDbSetMock = users;
+
             _contextMock = new Mock<IUserDbContext>();
             _contextMock.Setup(c => c.Users).Returns(_usersDbSetMock.Object);
             _contextMock.Setup(c => c.SaveChangesAsync(default)).ReturnsAsync(1);
-            _controller = new AuthController(_authServiceMock.Object, _contextMock.Object);
+
+
+            var roles = new List<ROLE_MASTER>
+            {
+                new ROLE_MASTER { SEQ_ROLE_MASTER = 1, ROLE_ID = "ADMIN", ROLE_DESCRIPTION = "ADMIN" },
+                new ROLE_MASTER { SEQ_ROLE_MASTER = 2, ROLE_ID = "USER", ROLE_DESCRIPTION = "USER" }
+            }.AsQueryable().BuildMockDbSet();
+            _userRolesDbSetMock = roles;
+
+            _rolesMock = new Mock<IUserRoleDbContext>();
+            _rolesMock.Setup(c => c.RoleMasters).Returns(_userRolesDbSetMock.Object);
+            _rolesMock.Setup(r => r.SaveChangesAsync(default)).ReturnsAsync(1);
+
+            _controller = new AuthController(_authServiceMock.Object, _rolesMock.Object, _contextMock.Object);
         }
 
         [Fact]
@@ -89,10 +106,10 @@ namespace BillingPocTwo.Auth.Api.Test
         public async Task GetUserRoles_ReturnsOkResult_WithListOfUserRoles()
         {
             // Arrange
-            var userRoles = new List<UserRole>
+            var userRoles = new List<ROLE_MASTER>
             {
-                new UserRole { Id = 1, Name = "Admin" },
-                new UserRole { Id = 2, Name = "User" }
+                new ROLE_MASTER { SEQ_ROLE_MASTER = 1, ROLE_ID = "ADMIN", ROLE_DESCRIPTION = "ADMIN" },
+                new ROLE_MASTER { SEQ_ROLE_MASTER = 2, ROLE_ID = "USER", ROLE_DESCRIPTION = "USER" }
             }.AsQueryable().BuildMockDbSet();
 
             _contextMock.Setup(c => c.UserRoles).Returns(userRoles.Object);
@@ -102,7 +119,7 @@ namespace BillingPocTwo.Auth.Api.Test
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result.Result);
-            var returnValue = Assert.IsType<List<UserRole>>(okResult.Value);
+            var returnValue = Assert.IsType<List<ROLE_MASTER>>(okResult.Value);
             Assert.Equal(2, returnValue.Count);
         }
 
@@ -111,10 +128,10 @@ namespace BillingPocTwo.Auth.Api.Test
         {
             // Arrange
             var userEmail = "test@example.com";
-            var roles = new List<UserRole>
+            var roles = new List<ROLE_MASTER>
             {
-                new UserRole { Id = 1, Name = "Admin" },
-                new UserRole { Id = 2, Name = "User" }
+                new ROLE_MASTER { SEQ_ROLE_MASTER = 1, ROLE_ID = "ADMIN", ROLE_DESCRIPTION = "ADMIN" },
+                new ROLE_MASTER { SEQ_ROLE_MASTER = 2, ROLE_ID = "USER", ROLE_DESCRIPTION = "USER" }
             };
 
             var user = new User
@@ -141,8 +158,8 @@ namespace BillingPocTwo.Auth.Api.Test
             Assert.Equal("Jane", dto.FirstName);
             Assert.Equal("Doe", dto.LastName);
             Assert.Equal(2, dto.NewRoles.Count);
-            Assert.Contains("Admin", dto.NewRoles);
-            Assert.Contains("User", dto.NewRoles);
+            Assert.Contains("ADMIN", dto.NewRoles);
+            Assert.Contains("USER", dto.NewRoles);
             Assert.True(dto.Active);
             Assert.False(dto.ServiceUser);
         }
@@ -178,10 +195,10 @@ namespace BillingPocTwo.Auth.Api.Test
         {
             // Arrange
             var userEmail = "john.doe@example.com";
-            var roles = new List<UserRole>
+            var roles = new List<ROLE_MASTER>
             {
-                new UserRole { Id = 1, Name = "Admin" },
-                new UserRole { Id = 2, Name = "User" }
+                new ROLE_MASTER { SEQ_ROLE_MASTER = 1, ROLE_ID = "ADMIN", ROLE_DESCRIPTION = "ADMIN" },
+                new ROLE_MASTER { SEQ_ROLE_MASTER = 2, ROLE_ID = "USER", ROLE_DESCRIPTION = "USER" }
             };
 
             var user = new User
@@ -242,12 +259,13 @@ namespace BillingPocTwo.Auth.Api.Test
                 LastName = "Doe",
                 Active = true,
                 ServiceUser = false,
-                NewRoles = new List<string> { "User" }
+                NewRoles = new List<string> { "FINANCE2" }
             };
 
-            var roles = new List<UserRole>
+            var roles = new List<ROLE_MASTER>
             {
-                new UserRole { Name = "User", Id = 1 }
+                new ROLE_MASTER { SEQ_ROLE_MASTER = 18, ROLE_ID = "RBSADMIN", ROLE_DESCRIPTION = "ADMINISTRATOR" },
+                new ROLE_MASTER { SEQ_ROLE_MASTER = 6, ROLE_ID = "FINANCE2", ROLE_DESCRIPTION = "FINANCE USER" }
             };
 
             var user = new User
@@ -257,7 +275,7 @@ namespace BillingPocTwo.Auth.Api.Test
                 LastName = "OldLastName",
                 Active = true,
                 ServiceUser = false,
-                Roles = new List<UserRole>(),
+                Roles = new List<ROLE_MASTER>(),
                 ModifiedBy = null,
                 ModifiedAt = null
             };
@@ -303,7 +321,7 @@ namespace BillingPocTwo.Auth.Api.Test
                 LastName = "NewLastName",
                 Active = true,
                 ServiceUser = false,
-                NewRoles = new List<string> { "Admin" }
+                NewRoles = new List<string> { "ADMIN" }
             };
 
             var mockHttpContext = new DefaultHttpContext();
@@ -334,7 +352,7 @@ namespace BillingPocTwo.Auth.Api.Test
                 LastName = "Doe",
                 Active = true,
                 ServiceUser = false,
-                NewRoles = new List<string> { "User" }
+                NewRoles = new List<string> { "USER" }
             };
 
             var mockHttpContext = new DefaultHttpContext();

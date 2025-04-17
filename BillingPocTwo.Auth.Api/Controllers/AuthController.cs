@@ -16,10 +16,12 @@ namespace BillingPocTwo.Auth.Api.Controllers
     {
         private readonly IAuthService _authService;
         private readonly IUserDbContext _context;
+        private readonly IUserRoleDbContext _rolesContext;
 
-        public AuthController(IAuthService authService, IUserDbContext context)
+        public AuthController(IAuthService authService, IUserRoleDbContext rolesContext, IUserDbContext context)
         {
             _authService = authService;
+            _rolesContext = rolesContext;
             _context = context;
         }
 
@@ -74,9 +76,9 @@ namespace BillingPocTwo.Auth.Api.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpGet("user-roles")]
-        public async Task<ActionResult<IEnumerable<UserRole>>> GetUserRoles()
+        public async Task<ActionResult<IEnumerable<ROLE_MASTER>>> GetUserRoles()
         {
-            var roles = await _context.UserRoles.ToListAsync();
+            var roles = await _authService.GetAllRolesAsync();
             return Ok(roles);
         }
 
@@ -90,7 +92,9 @@ namespace BillingPocTwo.Auth.Api.Controllers
                 return NotFound("User not found");
             }
 
-            var userRoles = user.Roles.Select(r => r.Name).ToList();
+            // Fetch role descriptions from ROLE_MASTER
+            var userRoles = user.Roles.Select(r => r.ROLE_DESCRIPTION).ToList();
+            var roleDescriptions = await _authService.GetRoleDescriptionsAsync(userRoles);
 
             var result = new ChangeRoleDto
             {
@@ -134,7 +138,7 @@ namespace BillingPocTwo.Auth.Api.Controllers
                 LastName = user.LastName,
                 Active = user.Active,
                 ServiceUser = user.ServiceUser,
-                Roles = user.Roles.Select(r => r.Name).ToList()
+                Roles = user.Roles.Select(r => r.ROLE_DESCRIPTION).ToList()
             };
 
             return Ok(userProfile);
@@ -167,11 +171,17 @@ namespace BillingPocTwo.Auth.Api.Controllers
             user.Active = request.Active;
             user.ServiceUser = request.ServiceUser;
 
-            var roles = await _context.UserRoles.Where(r => request.NewRoles.Contains(r.Name)).ToListAsync();
-            user.Roles = roles;
-
             user.ModifiedBy = currentUserEmail;
             user.ModifiedAt = DateTime.UtcNow;
+
+            if (request.NewRoles == null)
+            {
+                return BadRequest("New roles cannot be null.");
+            }
+
+            // Fetch roles from ROLE_MASTER
+            var roles = await _authService.GetRolesByIdsAsync(request.NewRoles);
+            user.Roles = roles.Select(r => new ROLE_MASTER { ROLE_DESCRIPTION = r.ROLE_DESCRIPTION }).ToList();
 
             await _context.SaveChangesAsync();
 

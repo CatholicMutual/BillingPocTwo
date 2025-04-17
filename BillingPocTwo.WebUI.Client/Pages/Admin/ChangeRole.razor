@@ -2,8 +2,9 @@
 
 @inject HttpClient Http
 @inject IHttpClientFactory HttpClientFactory
+@inject ISessionStorageService SessionStorage
 @inject NavigationManager Navigation
-@inject ILocalStorageService LocalStorage
+
 @attribute [Authorize(Roles = "Admin")]
 
 <h3>Modify User Account</h3>
@@ -67,24 +68,44 @@
 
 @code {
     public string userEmail = string.Empty;
-    private ChangeRoleDto changeDetailsModel = new ChangeRoleDto();
+    public ChangeRoleDto changeDetailsModel = new ChangeRoleDto();
     private List<RoleSelection> availableRoles = new List<RoleSelection>();
     public string message = string.Empty;
     public bool isLoading = false;
     private bool isSearchDone = false;
+    private string currentUserEmail = string.Empty; // Store the logged-in user's email
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Retrieve the logged-in user's email from session storage or authentication state
+        var token = await SessionStorage.GetItemAsync<string>("AccessToken");
+        if (!string.IsNullOrEmpty(token))
+        {
+            var claims = JwtParser.ParseClaimsFromJwt(token);
+            currentUserEmail = claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
+        }
+    }
 
     public async Task SearchUser()
     {
-        var token = await LocalStorage.GetItemAsync<string>("authToken");
+        if (userEmail.Equals(currentUserEmail, StringComparison.OrdinalIgnoreCase))
+        {
+            message = "You cannot modify your own account.";
+            isSearchDone = false;
+            StateHasChanged();
+            return;
+        }
+
+        var token = await SessionStorage.GetItemAsync<string>("AccessToken");
         if (string.IsNullOrEmpty(token))
         {
             await InvokeAsync(() =>
-                {
-                    message = "User is not authenticated";
-                    isLoading = false;
-                    StateHasChanged();
-                    return;
-                });
+            {
+                message = "User is not authenticated";
+                isLoading = false;
+                StateHasChanged();
+                return;
+            });
         }
 
         var client = HttpClientFactory.CreateClient("AuthApi");
@@ -130,12 +151,12 @@
             else
             {
                 await InvokeAsync(() =>
-            {
-                message = "Failed to load user details";
-                isLoading = false;
-                StateHasChanged();
-                return;
-            });
+                {
+                    message = "Failed to load user details";
+                    isLoading = false;
+                    StateHasChanged();
+                    return;
+                });
             }
         }
         else
@@ -152,51 +173,67 @@
 
     public async Task HandleChangeRole()
     {
+        if (string.IsNullOrEmpty(changeDetailsModel.Email))
+        {
+            message = "User email is not set.";
+            StateHasChanged();
+            return;
+        }
+
+        if (changeDetailsModel.Email.Equals(currentUserEmail, StringComparison.OrdinalIgnoreCase))
+        {
+            message = "You cannot modify your own account.";
+            StateHasChanged();
+            return;
+        }
+
         isLoading = true;
-        var token = await LocalStorage.GetItemAsync<string>("authToken");
+
+        var token = await SessionStorage.GetItemAsync<string>("AccessToken");
         if (string.IsNullOrEmpty(token))
         {
-            await InvokeAsync(() =>
-            {
-                message = "User is not authenticated";
-                isLoading = false;
-                StateHasChanged();
-                return;
-            });
+            message = "User is not authenticated.";
+            isLoading = false;
+            StateHasChanged();
+            return;
+        }
+
+        if (availableRoles == null)
+        {
+            message = "Available roles are not loaded.";
+            isLoading = false;
+            StateHasChanged();
+            return;
         }
 
         var client = HttpClientFactory.CreateClient("AuthApi");
 
-        changeDetailsModel.NewRoles = availableRoles.Where(r => r.IsSelected).Select(r => r.Name).ToList();
+        changeDetailsModel.NewRoles = availableRoles
+            .Where(r => r.IsSelected)
+            .Select(r => r.Name)
+            .ToList();
 
         var request = new HttpRequestMessage(HttpMethod.Put, "api/auth/change-user-details")
-        {
-            Content = JsonContent.Create(changeDetailsModel)
-        };
+            {
+                Content = JsonContent.Create(changeDetailsModel)
+            };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         var response = await client.SendAsync(request);
         if (response.IsSuccessStatusCode)
         {
-            await InvokeAsync(() =>
-            {
-                message = "Details changed successfully";
-                StateHasChanged();
-            });
-
+            message = "Details changed successfully.";
         }
         else
         {
             var responseContent = await response.Content.ReadAsStringAsync();
-
-            await InvokeAsync(() =>
-            {
-                message = responseContent;
-                StateHasChanged();
-            });
+            message = responseContent;
         }
+
         isLoading = false;
+        StateHasChanged();
     }
+
 
     private class RoleSelection
     {

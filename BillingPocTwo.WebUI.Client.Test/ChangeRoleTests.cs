@@ -3,7 +3,6 @@ using BillingPocTwo.WebUI.Client.Pages.Admin;
 using BillingPocTwo.Shared.DataObjects;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Components.Authorization;
-using Blazored.LocalStorage;
 using Moq;
 using Moq.Protected;
 using System.Net;
@@ -14,22 +13,22 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using BillingPocTwo.Shared.Entities;
 using Bunit.TestDoubles;
 using BillingPocTwo.Shared.Entities.Auth;
+using Blazored.SessionStorage;
 
 namespace BillingPocTwo.WebUI.Client.Test
 {
     public class ChangeRoleTests : TestContext
     {
-        private readonly Mock<ILocalStorageService> _localStorageMock;
+        private readonly Mock<ISessionStorageService> _sessionStorageMock;
         private readonly Mock<AuthenticationStateProvider> _authStateProviderMock;
         private readonly Mock<HttpMessageHandler> _httpMessageHandlerMock;
         private readonly HttpClient _httpClient;
 
         public ChangeRoleTests()
         {
-            _localStorageMock = new Mock<ILocalStorageService>();
+            _sessionStorageMock = new Mock<ISessionStorageService>();
             _httpMessageHandlerMock = new Mock<HttpMessageHandler>();
 
             // ? Create HttpClient using the already initialized _httpMessageHandlerMock
@@ -45,13 +44,13 @@ namespace BillingPocTwo.WebUI.Client.Test
 
             var customAuthStateProvider = new CustomAuthenticationStateProvider(
                 httpClientFactoryMock.Object,
-                _localStorageMock.Object,
+                _sessionStorageMock.Object,
                 userState,
                 _httpClient);
 
             Services.AddSingleton<HttpClient>(_httpClient);
             Services.AddSingleton<IHttpClientFactory>(httpClientFactoryMock.Object);
-            Services.AddSingleton(_localStorageMock.Object);
+            Services.AddSingleton(_sessionStorageMock.Object);
             Services.AddSingleton<AuthenticationStateProvider>(customAuthStateProvider);
             Services.AddSingleton(userState);
             Services.AddAuthorizationCore();
@@ -118,6 +117,15 @@ namespace BillingPocTwo.WebUI.Client.Test
         {
             // Arrange
             var cut = RenderComponent<ChangeRole>();
+
+            // Mock the AccessToken in session storage
+            var validToken = "valid-access-token";
+            _sessionStorageMock
+                .Setup(s => s.GetItemAsync<string>(It.IsAny<string>(), default))
+                .ReturnsAsync(validToken);
+
+
+            cut.Instance.changeDetailsModel.Email = "test@example.com"; // Set the email to avoid null reference
             var changeRoleDto = new ChangeRoleDto { Email = "test@example.com", NewRoles = new List<string> { "Admin" } };
             var responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
             {
@@ -143,7 +151,7 @@ namespace BillingPocTwo.WebUI.Client.Test
             cut.WaitForAssertion(() =>
             {
                 var successMessage = cut.Find("em").TextContent;
-                Assert.Equal("Details changed successfully", successMessage);
+                Assert.Equal("Details changed successfully.", successMessage);
             });
         }
 
