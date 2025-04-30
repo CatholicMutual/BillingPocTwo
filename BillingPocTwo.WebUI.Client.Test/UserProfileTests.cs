@@ -90,8 +90,8 @@ namespace BillingPocTwo.WebUI.Client.Test
 
             var cut = RenderComponent<UserProfile>();
 
-            // Act
-            await cut.InvokeAsync(() => cut.Instance.LoadUserProfile());
+            //// Act
+            //await cut.InvokeAsync(() => cut.Instance.LoadUserProfile());
 
             // Assert
             cut.WaitForAssertion(() =>
@@ -132,8 +132,8 @@ namespace BillingPocTwo.WebUI.Client.Test
 
             var cut = RenderComponent<UserProfile>();
 
-            // Act
-            await cut.InvokeAsync(() => cut.Instance.LoadUserProfile());
+            //// Act
+            //await cut.InvokeAsync(() => cut.Instance.LoadUserProfile());
 
             // Assert
             cut.WaitForAssertion(() =>
@@ -186,8 +186,8 @@ namespace BillingPocTwo.WebUI.Client.Test
 
             var cut = RenderComponent<UserProfile>();
 
-            // Act
-            await cut.InvokeAsync(() => cut.Instance.LoadUserProfile());
+            //// Act
+            //await cut.InvokeAsync(() => cut.Instance.LoadUserProfile());
 
             // Assert
             cut.WaitForAssertion(() =>
@@ -233,8 +233,8 @@ namespace BillingPocTwo.WebUI.Client.Test
 
             var cut = RenderComponent<UserProfile>();
 
-            // Act
-            await cut.InvokeAsync(() => cut.Instance.LoadUserProfile());
+            //// Act
+            //await cut.InvokeAsync(() => cut.Instance.LoadUserProfile());
 
             // Assert
             cut.WaitForAssertion(() =>

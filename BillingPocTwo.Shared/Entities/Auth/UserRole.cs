@@ -2,7 +2,11 @@
 {
     public class UserRole
     {
-        public int Id { get; set; }
-        public string Name { get; set; }
+        public Guid Id { get; set; } // Primary key
+        public Guid UserId { get; set; } // Foreign key to User
+        public string RoleName { get; set; } // Role name or ID
+
+        public User User { get; set; } // Navigation property
     }
+
 }

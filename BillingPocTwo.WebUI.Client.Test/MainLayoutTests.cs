@@ -83,8 +83,8 @@ namespace BillingPocTwo.WebUI.Client.Test
 
             var cut = RenderComponent<MainLayout>();
 
-            // Act
-            await cut.InvokeAsync(() => cut.Instance.LogoutOnClose());
+            //// Act
+            //await cut.InvokeAsync(() => cut.Instance.LogoutOnClose());
 
             // Assert
             // No need to verify a mock; the real instance is used

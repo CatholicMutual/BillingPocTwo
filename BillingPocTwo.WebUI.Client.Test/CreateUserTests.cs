@@ -96,8 +96,8 @@ namespace BillingPocTwo.WebUI.Client.Test
             // Arrange
             var roles = new List<UserRole>
             {
-                new UserRole { Name = "Admin" },
-                new UserRole { Name = "User" }
+                new UserRole { RoleName = "Admin" },
+                new UserRole { RoleName = "User" }
             };
 
             _sessionStorageMock
@@ -174,8 +174,8 @@ namespace BillingPocTwo.WebUI.Client.Test
             // Arrange
             var roles = new List<UserRole>
             {
-                new UserRole { Name = "Admin" },
-                new UserRole { Name = "User" }
+                new UserRole { RoleName = "Admin" },
+                new UserRole { RoleName = "User" }
             };
 
             // Mock the response for loading roles
@@ -286,7 +286,7 @@ namespace BillingPocTwo.WebUI.Client.Test
                 {
                     Content = JsonContent.Create(new List<UserRole>
                     {
-                new UserRole { Name = "Admin" }
+                new UserRole { RoleName = "Admin" }
                     })
                 });
 

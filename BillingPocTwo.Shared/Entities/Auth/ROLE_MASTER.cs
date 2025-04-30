@@ -10,7 +10,7 @@ namespace BillingPocTwo.Shared.Entities.Auth
     public class ROLE_MASTER
     {
         [Key]
-        public int SEQ_ROLE_MASTER { get; set; }
+        public decimal SEQ_ROLE_MASTER { get; set; }
         public string ROLE_ID { get; set; } = string.Empty;
         public string ROLE_DESCRIPTION { get; set; } = string.Empty;
         public string IS_LOCKED { get; set; } = string.Empty;

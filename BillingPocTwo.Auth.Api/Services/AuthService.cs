@@ -28,12 +28,7 @@ namespace BillingPocTwo.Auth.Api.Services
 
             if (user != null)
             {
-                // Fetch roles from ROLE_MASTER to ensure they are valid and not locked
-                var validRoles = await rolesContext.RoleMasters
-                    .Where(r => user.Roles.Select(ur => ur.ROLE_ID).Contains(r.ROLE_ID) && r.IS_LOCKED != "Y")
-                    .ToListAsync();
-
-                // Update the user's roles to only include valid roles
+                var validRoles = user.Roles.Where(r => !string.IsNullOrEmpty(r.RoleName)).ToList();
                 user.Roles = validRoles;
             }
 
@@ -91,7 +86,7 @@ namespace BillingPocTwo.Auth.Api.Services
                 .Where(r => request.Roles.Contains(r.ROLE_ID) && r.IS_LOCKED != "Y")
                 .ToListAsync();
 
-            user.Roles = roles.Select(r => new ROLE_MASTER { ROLE_DESCRIPTION = r.ROLE_DESCRIPTION }).ToList();
+            user.Roles = roles.Select(r => new UserRole { RoleName = r.ROLE_DESCRIPTION }).ToList();
 
             context.Users.Add(user);
             await context.SaveChangesAsync();
@@ -117,7 +112,7 @@ namespace BillingPocTwo.Auth.Api.Services
                 .Where(r => newRoles.Contains(r.ROLE_ID) && r.IS_LOCKED != "Y")
                 .ToListAsync();
 
-            user.Roles = roles.Select(r => new ROLE_MASTER { ROLE_DESCRIPTION = r.ROLE_DESCRIPTION }).ToList();
+            user.Roles = roles.Select(r => new UserRole { RoleName = r.ROLE_DESCRIPTION }).ToList();
 
             await context.SaveChangesAsync();
             return true;
@@ -133,24 +128,24 @@ namespace BillingPocTwo.Auth.Api.Services
             return result > 0;
         }
 
-        public async Task<List<ROLE_MASTER>> GetAllRolesAsync()
+        public async Task<List<UserRole>> GetAllRolesAsync()
         {
-            return await rolesContext.RoleMasters
+            return await context.UserRoles
                 .ToListAsync();
         }
 
         public async Task<List<string>> GetRoleDescriptionsAsync(List<string> roleIds)
         {
-            return await rolesContext.RoleMasters
-                .Where(r => roleIds.Contains(r.ROLE_ID))
-                .Select(r => r.ROLE_DESCRIPTION)
+            return await context.UserRoles
+                .Where(r => roleIds.Contains(r.Id.ToString()))
+                .Select(r => r.RoleName)
                 .ToListAsync();
         }
 
-        public async Task<List<ROLE_MASTER>> GetRolesByIdsAsync(List<string> roleIds)
+        public async Task<List<UserRole>> GetRolesByIdsAsync(List<string> roleIds)
         {
-            return await rolesContext.RoleMasters
-                .Where(r => roleIds.Contains(r.ROLE_ID))
+            return await context.UserRoles
+                .Where(r => roleIds.Contains(r.Id.ToString()))
                 .ToListAsync();
         }
 
@@ -183,7 +178,7 @@ namespace BillingPocTwo.Auth.Api.Services
 
         private async Task<string> CreateToken(User user)
         {
-            var userRoles = user.Roles.Select(r => r.ROLE_DESCRIPTION).ToList();
+            var userRoles = user.Roles.Select(r => r.RoleName).ToList();
 
             // Fetch role descriptions from ROLE_MASTER
             var roleDescriptions = await rolesContext.RoleMasters
@@ -198,7 +193,8 @@ namespace BillingPocTwo.Auth.Api.Services
                 new Claim("ChangePasswordOnFirstLogin", user.ChangePasswordOnFirstLogin.ToString())
             };
 
-            var roleClaims = user.Roles.Select(r => new Claim(ClaimTypes.Role, r.ROLE_ID)).ToList();
+            // Fix: Use RoleName instead of Id for ClaimTypes.Role
+            var roleClaims = user.Roles.Select(r => new Claim(ClaimTypes.Role, r.RoleName)).ToList();
             claims.AddRange(roleClaims);
 
             var key = new SymmetricSecurityKey(
@@ -244,7 +240,7 @@ namespace BillingPocTwo.Auth.Api.Services
             return user;
         }
 
-        public async Task<int?> GetRoleIdByNameAsync(string roleName)
+        public async Task<decimal?> GetRoleIdByNameAsync(string roleName)
         {
             var role = await rolesContext.RoleMasters.FirstOrDefaultAsync(r => r.ROLE_ID == roleName);
             return role?.SEQ_ROLE_MASTER;

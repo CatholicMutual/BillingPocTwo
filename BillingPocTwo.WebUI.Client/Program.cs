@@ -25,9 +25,9 @@ builder.Services.AddHttpClient("BillingPocTwo.ServerAPI", client => client.BaseA
 builder.Services.AddBlazoredSessionStorage();
 
 // Add authentication and authorization
-builder.Services.AddApiAuthorization();
-builder.Services.AddAuthorizationCore();
-builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
+//builder.Services.AddApiAuthorization();
+//builder.Services.AddAuthorizationCore();
+//builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
 
 // Register UserState
 builder.Services.AddScoped<UserState>();

@@ -1,4 +1,4 @@
-﻿@inject AuthenticationStateProvider AuthenticationStateProvider
+﻿@* @inject AuthenticationStateProvider AuthenticationStateProvider *@
 @inject UserState UserState
 @inject NavigationManager Navigation
 
@@ -13,11 +13,11 @@
 
 <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
     <nav class="nav flex-column">
-        @if (UserState.IsAuthenticated)
+        @* @if (UserState.IsAuthenticated)
         {
             <div class="nav-item px-3">
                 <span class="navbar-text" style="color: #cccccc;">Welcome, @UserState.Email</span>
-            </div>
+            </div> *@
 
             <h5 class="px-3" style="color: #cccccc;">Billing Tools:</h5>
             <div class="nav-item px-3">
@@ -57,8 +57,8 @@
                     </NavLink>
                 </div>
             </div>
-        }
-        @if (UserState.IsAdmin)
+       @*  } *@
+        @* @if (UserState.IsAdmin)
         {
             <h5 class="px-3" style="color: #cccccc;">Admin Tools:</h5>
             <div class="nav-item px-3">
@@ -85,8 +85,8 @@
                     <span class="bi bi-person-x-fill-nav-menu" aria-hidden="true"></span> Delete User
                 </NavLink>
             </div>
-        }
-        @if (!UserState.IsAuthenticated)
+        } *@
+        @* @if (!UserState.IsAuthenticated)
         {
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="login">
@@ -101,7 +101,7 @@
                     <span class="bi bi-box-arrow-right" aria-hidden="true"></span> Logout
                 </button>
             </div>
-        }
+        } *@
     </nav>
 </div>
 
@@ -123,8 +123,8 @@
         UserState.FirstName = null;
         UserState.LastName = null;
 
-        AuthenticationStateProvider.AuthenticationStateChanged +=
-            async (task) => await OnAuthenticationStateChanged(task);
+        // AuthenticationStateProvider.AuthenticationStateChanged +=
+        //     async (task) => await OnAuthenticationStateChanged(task);
 
         await UpdateUserState();
     }
@@ -137,27 +137,27 @@
 
     public async Task UpdateUserState()
     {
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
+        // var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        // var user = authState.User;
 
-        if (user.Identity.IsAuthenticated)
-        {
-            UserState.IsAdmin = user.IsInRole("Admin");
-            UserState.IsAuthenticated = true;
-            UserState.Email = user.FindFirst(ClaimTypes.Email)?.Value;
-            UserState.FirstName = user.FindFirst("FirstName")?.Value; 
-            UserState.LastName = user.FindFirst("LastName")?.Value; 
+        // if (user.Identity.IsAuthenticated)
+        // {
+        //     UserState.IsAdmin = user.IsInRole("Admin");
+        //     UserState.IsAuthenticated = true;
+        //     UserState.Email = user.FindFirst(ClaimTypes.Email)?.Value;
+        //     UserState.FirstName = user.FindFirst("FirstName")?.Value; 
+        //     UserState.LastName = user.FindFirst("LastName")?.Value; 
 
-        }
-        else
-        {
-            UserState.IsAdmin = false;
-            UserState.IsAuthenticated = false;
-            UserState.Email = null;
-            UserState.FirstName = null;
-            UserState.LastName = null;
+        // }
+        // else
+        // {
+        //     UserState.IsAdmin = false;
+        //     UserState.IsAuthenticated = false;
+        //     UserState.Email = null;
+        //     UserState.FirstName = null;
+        //     UserState.LastName = null;
 
-        }
+        // }
     }
 
     private string GetHomePageUrl()
@@ -182,7 +182,7 @@
 
     private async Task Logout()
     {
-        await ((CustomAuthenticationStateProvider)AuthenticationStateProvider).LogoutAsync();
+        // await ((CustomAuthenticationStateProvider)AuthenticationStateProvider).LogoutAsync();
         Navigation.NavigateTo("/");
     }
 }

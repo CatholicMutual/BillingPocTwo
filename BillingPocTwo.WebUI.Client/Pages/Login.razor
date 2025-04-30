@@ -4,7 +4,7 @@
 @inject HttpClient Http
 @inject NavigationManager Navigation
 @inject ISessionStorageService SessionStorage
-@inject AuthenticationStateProvider AuthStateProvider
+@* @inject AuthenticationStateProvider AuthStateProvider *@
 @inject UserState UserState
 
 <h3>Login</h3>
@@ -80,7 +80,7 @@
                 UserState.IsAdmin = roleClaims.Contains("Admin"); // Check if the user has the "Admin" role
 
                 // Notify AuthenticationStateProvider
-                ((CustomAuthenticationStateProvider)AuthStateProvider).NotifyUserAuthentication(tokenResponse.AccessToken);
+                // ((CustomAuthenticationStateProvider)AuthStateProvider).NotifyUserAuthentication(tokenResponse.AccessToken);
                 StateHasChanged();
 
                 var changePasswordClaim = claims.FirstOrDefault(c => c.Type == "ChangePasswordOnFirstLogin")?.Value;

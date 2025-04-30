@@ -142,8 +142,8 @@
                     changeDetailsModel = result;
                     availableRoles = roles.Select(r => new RoleSelection
                     {
-                        Name = r.Name,
-                        IsSelected = result.NewRoles.Contains(r.Name)
+                        Name = r.RoleName,
+                        IsSelected = result.NewRoles.Contains(r.RoleName)
                     }).ToList();
                     isSearchDone = true;
                 }

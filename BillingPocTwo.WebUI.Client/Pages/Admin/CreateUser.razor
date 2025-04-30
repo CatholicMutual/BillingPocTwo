@@ -85,7 +85,7 @@
             var roles = await response.Content.ReadFromJsonAsync<List<UserRole>>();
             if (roles != null)
             {
-                availableRoles = roles.Select(r => new RoleSelection { Name = r.Name }).ToList();
+                availableRoles = roles.Select(r => new RoleSelection { Name = r.RoleName }).ToList();
             }
         }
         else

@@ -25,7 +25,7 @@ namespace BillingPocTwo.Auth.Api.Controllers
             _context = context;
         }
 
-        [Authorize(Roles = "Admin")]
+        //[Authorize(Roles = "Admin")]
         [HttpPost("create-user")]
         public async Task<ActionResult<User>> CreateUser(CreateUserDto request)
         {
@@ -46,7 +46,7 @@ namespace BillingPocTwo.Auth.Api.Controllers
             return Ok(user);
         }
 
-        [Authorize(Roles = "Admin")]
+        //[Authorize(Roles = "Admin")]
         [HttpPut("update-user")]
         public async Task<IActionResult> UpdateUser(UserDto request)
         {
@@ -74,15 +74,15 @@ namespace BillingPocTwo.Auth.Api.Controllers
             return NoContent();
         }
 
-        [Authorize(Roles = "Admin")]
+        //[Authorize(Roles = "Admin")]
         [HttpGet("user-roles")]
-        public async Task<ActionResult<IEnumerable<ROLE_MASTER>>> GetUserRoles()
+        public async Task<ActionResult<IEnumerable<UserRole>>> GetUserRoles()
         {
             var roles = await _authService.GetAllRolesAsync();
             return Ok(roles);
         }
 
-        [Authorize(Roles = "Admin")]
+        //[Authorize(Roles = "Admin")]
         [HttpGet("user-roles/{email}")]
         public async Task<ActionResult<ChangeRoleDto>> GetUserRolesByEmail(string email)
         {
@@ -93,7 +93,7 @@ namespace BillingPocTwo.Auth.Api.Controllers
             }
 
             // Fetch role descriptions from ROLE_MASTER
-            var userRoles = user.Roles.Select(r => r.ROLE_DESCRIPTION).ToList();
+            var userRoles = user.Roles.Select(r => r.RoleName).ToList();
             var roleDescriptions = await _authService.GetRoleDescriptionsAsync(userRoles);
 
             var result = new ChangeRoleDto
@@ -109,7 +109,7 @@ namespace BillingPocTwo.Auth.Api.Controllers
             return Ok(result);
         }
 
-        [Authorize(Roles = "Admin")]
+        //[Authorize(Roles = "Admin")]
         [HttpGet("search-users")]
         public async Task<ActionResult<IEnumerable<User>>> SearchUsers([FromQuery] string email)
         {
@@ -120,7 +120,7 @@ namespace BillingPocTwo.Auth.Api.Controllers
             return Ok(users);
         }
 
-        [Authorize]
+        //[Authorize]
         [HttpGet("user-profile/{email}")]
         public async Task<ActionResult<UserProfileDto>> GetUserProfile(string email)
         {
@@ -138,13 +138,13 @@ namespace BillingPocTwo.Auth.Api.Controllers
                 LastName = user.LastName,
                 Active = user.Active,
                 ServiceUser = user.ServiceUser,
-                Roles = user.Roles.Select(r => r.ROLE_DESCRIPTION).ToList()
+                Roles = user.Roles.Select(r => r.RoleName).ToList()
             };
 
             return Ok(userProfile);
         }
 
-        [Authorize(Roles = "Admin")]
+        //[Authorize(Roles = "Admin")]
         [HttpPut("change-user-details")]
         public async Task<IActionResult> ChangeUserDetails(ChangeRoleDto request)
         {
@@ -179,16 +179,16 @@ namespace BillingPocTwo.Auth.Api.Controllers
                 return BadRequest("New roles cannot be null.");
             }
 
-            // Fetch roles from ROLE_MASTER
+            // Fetch roles from UserRole
             var roles = await _authService.GetRolesByIdsAsync(request.NewRoles);
-            user.Roles = roles.Select(r => new ROLE_MASTER { ROLE_DESCRIPTION = r.ROLE_DESCRIPTION }).ToList();
+            user.Roles = roles.Select(r => new UserRole { RoleName = r.RoleName }).ToList();
 
             await _context.SaveChangesAsync();
 
             return NoContent();
         }
 
-        [Authorize(Roles = "Admin")]
+        //[Authorize(Roles = "Admin")]
         [HttpDelete("delete-user/{email}")]
         public async Task<IActionResult> DeleteUser(string email)
         {
@@ -224,7 +224,7 @@ namespace BillingPocTwo.Auth.Api.Controllers
             return Ok(result);
         }
 
-        [Authorize]
+        //[Authorize]
         [HttpPost("logout")]
         public async Task<IActionResult> Logout()
         {

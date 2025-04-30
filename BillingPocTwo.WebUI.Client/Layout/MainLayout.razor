@@ -1,9 +1,9 @@
 ﻿@inherits LayoutComponentBase
-@inject AuthenticationStateProvider AuthStateProvider
+@* @inject AuthenticationStateProvider AuthStateProvider *@
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 
-<CascadingAuthenticationState>
+@* <CascadingAuthenticationState> *@
     <div class="page">
         <div class="sidebar">
             <NavMenu />
@@ -23,7 +23,7 @@
             </article>
         </main>
     </div>
-</CascadingAuthenticationState>
+@* </CascadingAuthenticationState> *@
 
 @code {
     public async Task OnAfterRenderAsync(bool firstRender)
@@ -34,15 +34,27 @@
         }
     }
 
-    [JSInvokable]
-    public async Task LogoutOnClose()
-    {
-        await ((CustomAuthenticationStateProvider)AuthStateProvider).LogoutAsync();
-    }
-
     public async Task Logout()
     {
-        await ((CustomAuthenticationStateProvider)AuthStateProvider).LogoutAsync();
         Navigation.NavigateTo("/");
     }
+    // public async Task OnAfterRenderAsync(bool firstRender)
+    // {
+    //     if (firstRender)
+    //     {
+    //         await JSRuntime.InvokeVoidAsync("import", "./js/logout.js");
+    //     }
+    // }
+
+    // [JSInvokable]
+    // public async Task LogoutOnClose()
+    // {
+    //     await ((CustomAuthenticationStateProvider)AuthStateProvider).LogoutAsync();
+    // }
+
+    // public async Task Logout()
+    // {
+    //     await ((CustomAuthenticationStateProvider)AuthStateProvider).LogoutAsync();
+    //     Navigation.NavigateTo("/");
+    // }
 }

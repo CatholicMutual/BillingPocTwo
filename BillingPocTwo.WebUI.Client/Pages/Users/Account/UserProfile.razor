@@ -4,7 +4,7 @@
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager Navigation
 @inject ISessionStorageService SessionStorage
-@inject AuthenticationStateProvider AuthenticationStateProvider
+@* @inject AuthenticationStateProvider AuthenticationStateProvider *@
 
 @attribute [Authorize]
 
@@ -42,51 +42,51 @@ else
     public string message = string.Empty;
     private bool isLoading = false;
 
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadUserProfile();
-    }
+    // protected override async Task OnInitializedAsync()
+    // {
+    //     await LoadUserProfile();
+    // }
 
-    public async Task LoadUserProfile()
-    {
-        isLoading = true;
+    // public async Task LoadUserProfile()
+    // {
+    //     isLoading = true;
 
-        var token = await SessionStorage.GetItemAsync<string>("AccessToken");
-        if (string.IsNullOrEmpty(token))
-        {
-            message = "User is not authenticated";
-            isLoading = false;
-             StateHasChanged();
-            return;
-        }
+    //     var token = await SessionStorage.GetItemAsync<string>("AccessToken");
+    //     if (string.IsNullOrEmpty(token))
+    //     {
+    //         message = "User is not authenticated";
+    //         isLoading = false;
+    //          StateHasChanged();
+    //         return;
+    //     }
 
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-        var email = user.FindFirst(c => c.Type == ClaimTypes.Email || c.Type == "email")?.Value;
+    //     var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+    //     var user = authState.User;
+    //     var email = user.FindFirst(c => c.Type == ClaimTypes.Email || c.Type == "email")?.Value;
 
-        if (string.IsNullOrEmpty(email))
-        {
-            message = "Failed to retrieve user email";
-            isLoading = false;
-            StateHasChanged();
-            return;
-        }
+    //     if (string.IsNullOrEmpty(email))
+    //     {
+    //         message = "Failed to retrieve user email";
+    //         isLoading = false;
+    //         StateHasChanged();
+    //         return;
+    //     }
 
-        var client = HttpClientFactory.CreateClient("AuthApi");
+    //     var client = HttpClientFactory.CreateClient("AuthApi");
 
-        var request = new HttpRequestMessage(HttpMethod.Get, $"api/auth/user-profile/{email}");
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+    //     var request = new HttpRequestMessage(HttpMethod.Get, $"api/auth/user-profile/{email}");
+    //     request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var response = await client.SendAsync(request);
-        if (response.IsSuccessStatusCode)
-        {
-            userProfile = await response.Content.ReadFromJsonAsync<UserProfileDto>();
-        }
-        else
-        {
-            message = "Failed to load user profile";
-        }
-        isLoading = false;
-        StateHasChanged();
-    }
+    //     var response = await client.SendAsync(request);
+    //     if (response.IsSuccessStatusCode)
+    //     {
+    //         userProfile = await response.Content.ReadFromJsonAsync<UserProfileDto>();
+    //     }
+    //     else
+    //     {
+    //         message = "Failed to load user profile";
+    //     }
+    //     isLoading = false;
+    //     StateHasChanged();
+    // }
 }

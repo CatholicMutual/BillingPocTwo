@@ -106,10 +106,10 @@ namespace BillingPocTwo.Auth.Api.Test
         public async Task GetUserRoles_ReturnsOkResult_WithListOfUserRoles()
         {
             // Arrange
-            var userRoles = new List<ROLE_MASTER>
+            var userRoles = new List<UserRole>
             {
-                new ROLE_MASTER { SEQ_ROLE_MASTER = 1, ROLE_ID = "ADMIN", ROLE_DESCRIPTION = "ADMIN" },
-                new ROLE_MASTER { SEQ_ROLE_MASTER = 2, ROLE_ID = "USER", ROLE_DESCRIPTION = "USER" }
+                new UserRole { Id = Guid.NewGuid(), RoleName = "ADMIN" }, // Fixed: Changed 'Id = 1' to 'Id = Guid.NewGuid()'
+                new UserRole { Id = Guid.NewGuid(), RoleName = "USER" }   // Fixed: Changed 'Id = 2' to 'Id = Guid.NewGuid()'
             }.AsQueryable().BuildMockDbSet();
 
             _contextMock.Setup(c => c.UserRoles).Returns(userRoles.Object);
@@ -128,10 +128,10 @@ namespace BillingPocTwo.Auth.Api.Test
         {
             // Arrange
             var userEmail = "test@example.com";
-            var roles = new List<ROLE_MASTER>
+            var roles = new List<UserRole>
             {
-                new ROLE_MASTER { SEQ_ROLE_MASTER = 1, ROLE_ID = "ADMIN", ROLE_DESCRIPTION = "ADMIN" },
-                new ROLE_MASTER { SEQ_ROLE_MASTER = 2, ROLE_ID = "USER", ROLE_DESCRIPTION = "USER" }
+                new UserRole { Id = Guid.NewGuid(), RoleName = "ADMIN" }, // Fixed: Changed 'Id = 1' to 'Id = Guid.NewGuid()'
+                new UserRole { Id = Guid.NewGuid(), RoleName = "USER" }   // Fixed: Changed 'Id = 2' to 'Id = Guid.NewGuid()'
             };
 
             var user = new User
@@ -195,10 +195,10 @@ namespace BillingPocTwo.Auth.Api.Test
         {
             // Arrange
             var userEmail = "john.doe@example.com";
-            var roles = new List<ROLE_MASTER>
+            var roles = new List<UserRole>
             {
-                new ROLE_MASTER { SEQ_ROLE_MASTER = 1, ROLE_ID = "ADMIN", ROLE_DESCRIPTION = "ADMIN" },
-                new ROLE_MASTER { SEQ_ROLE_MASTER = 2, ROLE_ID = "USER", ROLE_DESCRIPTION = "USER" }
+                new UserRole { Id = new Guid(), RoleName = "ADMIN" },
+                new UserRole { Id = new Guid(), RoleName = "USER" }
             };
 
             var user = new User
@@ -262,10 +262,10 @@ namespace BillingPocTwo.Auth.Api.Test
                 NewRoles = new List<string> { "FINANCE2" }
             };
 
-            var roles = new List<ROLE_MASTER>
+            var roles = new List<UserRole>
             {
-                new ROLE_MASTER { SEQ_ROLE_MASTER = 18, ROLE_ID = "RBSADMIN", ROLE_DESCRIPTION = "ADMINISTRATOR" },
-                new ROLE_MASTER { SEQ_ROLE_MASTER = 6, ROLE_ID = "FINANCE2", ROLE_DESCRIPTION = "FINANCE USER" }
+                new UserRole { Id = new Guid(), RoleName = "ADMINISTRATOR" },
+                new UserRole { Id = new Guid(), RoleName = "FINANCE USER" }
             };
 
             var user = new User
@@ -275,7 +275,7 @@ namespace BillingPocTwo.Auth.Api.Test
                 LastName = "OldLastName",
                 Active = true,
                 ServiceUser = false,
-                Roles = new List<ROLE_MASTER>(),
+                Roles = new List<UserRole>(),
                 ModifiedBy = null,
                 ModifiedAt = null
             };
