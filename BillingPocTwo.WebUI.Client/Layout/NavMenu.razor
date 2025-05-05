@@ -1,5 +1,4 @@
-﻿@* @inject AuthenticationStateProvider AuthenticationStateProvider *@
-@inject UserState UserState
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager Navigation
 
 <div class="top-row ps-3 navbar navbar-dark">
@@ -13,12 +12,8 @@
 
 <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
     <nav class="nav flex-column">
-        @* @if (UserState.IsAuthenticated)
+        @if (isAuthenticated)
         {
-            <div class="nav-item px-3">
-                <span class="navbar-text" style="color: #cccccc;">Welcome, @UserState.Email</span>
-            </div> *@
-
             <h5 class="px-3" style="color: #cccccc;">Billing Tools:</h5>
             <div class="nav-item px-3">
                 <button class="btn btn-link nav-link" @onclick="ToggleBillingMenu">
@@ -35,73 +30,7 @@
                     </NavLink>
                 </div>
             </div>
-
-            <h5 class="px-3" style="color: #cccccc;">User Tools:</h5>
-            <div class="nav-item px-3">
-                <button class="btn btn-link nav-link" @onclick="ToggleAccountMenu">
-                    <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> Account
-                </button>
-                <div class="@AccountMenuCssClass">
-                    <NavLink class="nav-link" href="user-profile">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person" viewBox="0 0 16 16">
-                            <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM8 9a5 5 0 0 0-4.546 2.916C3.455 12.68 4.48 13 5.5 13h5c1.02 0 2.045-.32 2.046-.084A5 5 0 0 0 8 9z" />
-                        </svg>
-                        <span class="bi bi-person" aria-hidden="true"></span> User Profile
-                    </NavLink>
-                    <NavLink class="nav-link" href="change-password">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-passport" viewBox="0 0 16 16">
-                            <path d="M8 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6M6 8a2 2 0 1 1 4 0 2 2 0 0 1-4 0m-.5 4a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1z" />
-                            <path d="M3.232 1.776A1.5 1.5 0 0 0 2 3.252v10.95c0 .445.191.838.49 1.11.367.422.908.688 1.51.688h8a2 2 0 0 0 2-2V4a2 2 0 0 0-1-1.732v-.47A1.5 1.5 0 0 0 11.232.321l-8 1.454ZM4 3h8a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1" />
-                        </svg>
-                        <span class="bi bi-key-fill" aria-hidden="true"></span> Change Password
-                    </NavLink>
-                </div>
-            </div>
-       @*  } *@
-        @* @if (UserState.IsAdmin)
-        {
-            <h5 class="px-3" style="color: #cccccc;">Admin Tools:</h5>
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="create-user">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-add" viewBox="0 0 16 16">
-                        <path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m.5-5v1h1a.5.5 0 0 1 0 1h-1v1a.5.5 0 0 1-1 0v-1h-1a.5.5 0 0 1 0-1h1v-1a.5.5 0 0 1 1 0m-2-6a3 3 0 1 1-6 0 3 3 0 0 1 6 0M8 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4" />
-                        <path d="M8.256 14a4.5 4.5 0 0 1-.229-1.004H3c.001-.246.154-.986.832-1.664C4.484 10.68 5.711 10 8 10q.39 0 .74.025c.226-.341.496-.65.804-.918Q8.844 9.002 8 9c-5 0-6 3-6 4s1 1 1 1z" />
-                    </svg>
-                    <span class="bi bi-person-plus-fill-nav-menu" aria-hidden="true"></span> Create User
-                </NavLink>
-                <NavLink class="nav-link" href="change-role">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-fill-gear" viewBox="0 0 16 16">
-                        <path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0m-9 8c0 1 1 1 1 1h5.256A4.5 4.5 0 0 1 8 12.5a4.5 4.5 0 0 1 1.544-3.393Q8.844 9.002 8 9c-5 0-6 3-6 4m9.886-3.54c.18-.613 1.048-.613 1.229 0l.043.148a.64.64 0 0 0 .921.382l.136-.074c.561-.306 1.175.308.87.869l-.075.136a.64.64 0 0 0 .382.92l.149.045c.612.18.612 1.048 0 1.229l-.15.043a.64.64 0 0 0-.38.921l.074.136c.305.561-.309 1.175-.87.87l-.136-.075a.64.64 0 0 0-.92.382zM14 12.5a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0" />
-                    </svg>
-                    <span class="bi bi-person-badge-fill-nav-menu" aria-hidden="true"></span> Modify User
-                </NavLink>
-            </div>
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="delete-user">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-x" viewBox="0 0 16 16">
-                        <path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0M8 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4m.256 7a4.5 4.5 0 0 1-.229-1.004H3c.001-.246.154-.986.832-1.664C4.484 10.68 5.711 10 8 10q.39 0 .74.025c.226-.341.496-.65.804-.918Q8.844 9.002 8 9c-5 0-6 3-6 4s1 1 1 1z" />
-                        <path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m-.646-4.854.646.647.646-.647a.5.5 0 0 1 .708.708l-.647.646.647.646a.5.5 0 0 1-.708.708l-.646-.647-.646.647a.5.5 0 0 1-.708-.708l.647-.646-.647-.646a.5.5 0 0 1 .708-.708" />
-                    </svg>
-                    <span class="bi bi-person-x-fill-nav-menu" aria-hidden="true"></span> Delete User
-                </NavLink>
-            </div>
-        } *@
-        @* @if (!UserState.IsAuthenticated)
-        {
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="login">
-                    <span class="bi bi-box-arrow-in-right" aria-hidden="true"></span> Login
-                </NavLink>
-            </div>
         }
-        @if (UserState.IsAuthenticated)
-        {
-            <div class="nav-item px-3">
-                <button class="btn btn-link nav-link" @onclick="Logout">
-                    <span class="bi bi-box-arrow-right" aria-hidden="true"></span> Logout
-                </button>
-            </div>
-        } *@
     </nav>
 </div>
 
@@ -109,60 +38,32 @@
     private bool collapseNavMenu = true;
     private bool collapseAccountMenu = true;
     private bool collapseBillingMenu = true;
+    private bool isAuthenticated;
 
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
-    private string? AccountMenuCssClass => collapseAccountMenu ? "collapse" : null;
     private string? BillingMenuCssClass => collapseBillingMenu ? "collapse" : null;
 
     protected override async Task OnInitializedAsync()
     {
-        // Reset UserState to default values
-        UserState.IsAuthenticated = false;
-        UserState.IsAdmin = false;
-        UserState.Email = null;
-        UserState.FirstName = null;
-        UserState.LastName = null;
-
-        // AuthenticationStateProvider.AuthenticationStateChanged +=
-        //     async (task) => await OnAuthenticationStateChanged(task);
-
-        await UpdateUserState();
+        AuthenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+        await UpdateAuthenticationState();
     }
 
-    private async Task OnAuthenticationStateChanged(Task<AuthenticationState> task)
+    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
     {
-        await UpdateUserState();
+        await UpdateAuthenticationState();
         StateHasChanged();
     }
 
-    public async Task UpdateUserState()
+    private async Task UpdateAuthenticationState()
     {
-        // var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        // var user = authState.User;
-
-        // if (user.Identity.IsAuthenticated)
-        // {
-        //     UserState.IsAdmin = user.IsInRole("Admin");
-        //     UserState.IsAuthenticated = true;
-        //     UserState.Email = user.FindFirst(ClaimTypes.Email)?.Value;
-        //     UserState.FirstName = user.FindFirst("FirstName")?.Value; 
-        //     UserState.LastName = user.FindFirst("LastName")?.Value; 
-
-        // }
-        // else
-        // {
-        //     UserState.IsAdmin = false;
-        //     UserState.IsAuthenticated = false;
-        //     UserState.Email = null;
-        //     UserState.FirstName = null;
-        //     UserState.LastName = null;
-
-        // }
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
     }
 
     private string GetHomePageUrl()
     {
-        return UserState.IsAuthenticated ? "/welcome2" : "/";
+        return isAuthenticated ? "/welcome2" : "/";
     }
 
     private void ToggleNavMenu()
@@ -175,14 +76,15 @@
         collapseAccountMenu = !collapseAccountMenu;
     }
 
-    private void ToggleBillingMenu() 
+    private void ToggleBillingMenu()
     {
         collapseBillingMenu = !collapseBillingMenu;
     }
 
-    private async Task Logout()
-    {
-        // await ((CustomAuthenticationStateProvider)AuthenticationStateProvider).LogoutAsync();
-        Navigation.NavigateTo("/");
-    }
+    // private async Task Logout()
+    // {
+    //     // SessionStorage.ClearAsync(); // optional
+    //     // LocalStorage.ClearAsync();   // optional
+    //     // Navigation.NavigateTo("authentication/logout", true);
+    // }
 }

@@ -18,5 +18,13 @@
         public string? ModifiedBy { get; set; } // New field
         public DateTime? ModifiedAt { get; set; } // New field
         public ICollection<UserUserRole> UserUserRoles { get; set; }
+
+        // Azure AD User Profile Properties
+        public string? DisplayName { get; set; } // Full name of the user
+        public string? UserPrincipalName { get; set; } // User's email or login name
+        public string? JobTitle { get; set; } // Job title of the user
+        public string? MobilePhone { get; set; } // Mobile phone number
+        public string? OfficeLocation { get; set; } // Office location
+        public string? PreferredLanguage { get; set; } // Preferred language
     }
 }

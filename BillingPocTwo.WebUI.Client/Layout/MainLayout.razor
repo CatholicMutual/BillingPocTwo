@@ -1,16 +1,15 @@
-﻿@inherits LayoutComponentBase
-@* @inject AuthenticationStateProvider AuthStateProvider *@
+@inherits LayoutComponentBase
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 
-@* <CascadingAuthenticationState> *@
     <div class="page">
         <div class="sidebar">
             <NavMenu />
         </div>
 
         <main>
-            <div class="top-row px-4">
+            <div class="top-row px-4 auth">
+            <LoginDisplay />
                 <div class="ml-auto">
                     <a href="https://catholicmutual.org" target="_blank" rel="noopener noreferrer" class="external-link">
                         <img src="images/logo.png" alt="Catholic Mutual Group" style="height: 40px;" />
@@ -23,38 +22,18 @@
             </article>
         </main>
     </div>
-@* </CascadingAuthenticationState> *@
 
 @code {
     public async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
-        {
-            await JSRuntime.InvokeVoidAsync("import", "./js/logout.js");
-        }
+        // if (firstRender)
+        // {
+        //     await JSRuntime.InvokeVoidAsync("import", "./js/logout.js");
+        // }
     }
-
-    public async Task Logout()
-    {
-        Navigation.NavigateTo("/");
-    }
-    // public async Task OnAfterRenderAsync(bool firstRender)
-    // {
-    //     if (firstRender)
-    //     {
-    //         await JSRuntime.InvokeVoidAsync("import", "./js/logout.js");
-    //     }
-    // }
-
-    // [JSInvokable]
-    // public async Task LogoutOnClose()
-    // {
-    //     await ((CustomAuthenticationStateProvider)AuthStateProvider).LogoutAsync();
-    // }
 
     // public async Task Logout()
     // {
-    //     await ((CustomAuthenticationStateProvider)AuthStateProvider).LogoutAsync();
     //     Navigation.NavigateTo("/");
     // }
 }

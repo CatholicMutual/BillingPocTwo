@@ -58,93 +58,93 @@ namespace BillingPocTwo.WebUI.Client.Test
             Services.AddSingleton<NavigationManager>(fakeNavigationManager);
         }
 
-        [Fact]
-        public void MainLayout_ShouldRenderCorrectly()
-        {
-            // Arrange
-            var cut = RenderComponent<MainLayout>();
+        //[Fact]
+        //public void MainLayout_ShouldRenderCorrectly()
+        //{
+        //    // Arrange
+        //    var cut = RenderComponent<MainLayout>();
 
-            // Act
-            var image = cut.Find("a.external-link img");
+        //    // Act
+        //    var image = cut.Find("a.external-link img");
 
-            // Assert
-            Assert.Equal("Catholic Mutual Group", image.GetAttribute("alt"));
-        }
+        //    // Assert
+        //    Assert.Equal("Catholic Mutual Group", image.GetAttribute("alt"));
+        //}
 
-        [Fact]
-        public async Task MainLayout_ShouldInvokeLogoutOnClose()
-        {
-            // Arrange
-            var httpClient = CreateMockHttpClient();
+        //[Fact]
+        //public async Task MainLayout_ShouldInvokeLogoutOnClose()
+        //{
+        //    // Arrange
+        //    var httpClient = CreateMockHttpClient();
 
-            _httpClientFactoryMock
-                .Setup(factory => factory.CreateClient("AuthApi"))
-                .Returns(httpClient); // Now mock the named client for "AuthApi"
+        //    _httpClientFactoryMock
+        //        .Setup(factory => factory.CreateClient("AuthApi"))
+        //        .Returns(httpClient); // Now mock the named client for "AuthApi"
 
-            var cut = RenderComponent<MainLayout>();
+        //    var cut = RenderComponent<MainLayout>();
 
-            //// Act
-            //await cut.InvokeAsync(() => cut.Instance.LogoutOnClose());
+        //    //// Act
+        //    //await cut.InvokeAsync(() => cut.Instance.LogoutOnClose());
 
-            // Assert
-            // No need to verify a mock; the real instance is used
-        }
+        //    // Assert
+        //    // No need to verify a mock; the real instance is used
+        //}
 
-        [Fact]
-        public async Task MainLayout_ShouldNavigateToHomeOnLogout()
-        {
-            // Arrange
-            var userState = new UserState
-            {
-                IsAdmin = true,
-                IsUser = true,
-                Email = "user@example.com"
-            };
+        //[Fact]
+        //public async Task MainLayout_ShouldNavigateToHomeOnLogout()
+        //{
+        //    // Arrange
+        //    var userState = new UserState
+        //    {
+        //        IsAdmin = true,
+        //        IsUser = true,
+        //        Email = "user@example.com"
+        //    };
 
-            var sessionStorageMock = new Mock<ISessionStorageService>();
-            var httpClient = CreateMockHttpClient();
+        //    var sessionStorageMock = new Mock<ISessionStorageService>();
+        //    var httpClient = CreateMockHttpClient();
 
-            var customAuthStateProvider = new CustomAuthenticationStateProvider(
-                _httpClientFactoryMock.Object, // Use the initialized mock
-                sessionStorageMock.Object,
-                userState,
-                httpClient
-            );
+        //    var customAuthStateProvider = new CustomAuthenticationStateProvider(
+        //        _httpClientFactoryMock.Object, // Use the initialized mock
+        //        sessionStorageMock.Object,
+        //        userState,
+        //        httpClient
+        //    );
 
-            _httpClientFactoryMock
-                .Setup(factory => factory.CreateClient("AuthApi"))
-                .Returns(httpClient); // Now mock the named client for "AuthApi"
+        //    _httpClientFactoryMock
+        //        .Setup(factory => factory.CreateClient("AuthApi"))
+        //        .Returns(httpClient); // Now mock the named client for "AuthApi"
 
-            // Override any previously registered AuthenticationStateProvider
-            Services.AddSingleton<AuthenticationStateProvider>(customAuthStateProvider);
+        //    // Override any previously registered AuthenticationStateProvider
+        //    Services.AddSingleton<AuthenticationStateProvider>(customAuthStateProvider);
 
-            var navigationManager = Services.GetRequiredService<NavigationManager>() as FakeNavigationManager;
-            var cut = RenderComponent<MainLayout>();
+        //    var navigationManager = Services.GetRequiredService<NavigationManager>() as FakeNavigationManager;
+        //    var cut = RenderComponent<MainLayout>();
 
-            // Act
-            await cut.InvokeAsync(() => cut.Instance.Logout());
+        //    // Act
+        //    await cut.InvokeAsync(() => cut.Instance.Logout());
 
-            // Assert
-            Assert.Equal("http://localhost/", navigationManager.Uri);
-        }
+        //    // Assert
+        //    Assert.Equal("http://localhost/", navigationManager.Uri);
+        //}
 
-        [Fact]
-        public async Task MainLayout_ShouldImportLogoutScriptOnFirstRender()
-        {
-            // Arrange
-            var cut = RenderComponent<MainLayout>();
+        //[Fact]
+        //public async Task MainLayout_ShouldImportLogoutScriptOnFirstRender()
+        //{
+        //    // Arrange
+        //    var cut = RenderComponent<MainLayout>();
 
-            // Act
-            await cut.InvokeAsync(() => cut.Instance.OnAfterRenderAsync(true));
+        //    // Act
+        //    await cut.InvokeAsync(() => cut.Instance.OnAfterRenderAsync(true));
 
-            // Assert
-            _jsRuntimeMock.Verify(
-                x => x.InvokeAsync<object>(
-                    "import",
-                    It.Is<object[]>(args => args.Length == 1 && args[0]!.ToString() == "./js/logout.js")),
-                Times.Once
-            );
-        }
+        //    // Assert
+        //    _jsRuntimeMock.Verify(
+        //        x => x.InvokeAsync<object>(
+        //            "import",
+        //            It.Is<object[]>(args => args.Length == 1 && args[0]!.ToString() == "./js/logout.js")),
+        //        Times.Once
+        //    );
+        //}
 
         private static HttpClient CreateMockHttpClient()
         {

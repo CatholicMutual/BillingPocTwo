@@ -1,0 +1,54 @@
+@page "/profile"
+
+@inject Microsoft.Graph.GraphServiceClient GraphServiceClient
+@attribute [Authorize]
+
+<h3>User Profile</h3>
+@if (user == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Property</th>
+                <th>Value</th>
+            </tr>
+        </thead>
+        <tr>
+            <td> DisplayName </td>
+            <td> @user.DisplayName </td>
+        </tr>
+        <tr>
+            <td> UserPrincipalName </td>
+            <td> @user.UserPrincipalName </td>
+        </tr>
+    </table>
+}
+
+@code {
+    User? user;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var azureAdUser = await GraphServiceClient.Me.GetAsync();
+            user = new User
+                {
+                    DisplayName = azureAdUser.DisplayName,
+                    UserPrincipalName = azureAdUser.UserPrincipalName,
+                    JobTitle = azureAdUser.JobTitle,
+                    MobilePhone = azureAdUser.MobilePhone,
+                    OfficeLocation = azureAdUser.OfficeLocation,
+                    PreferredLanguage = azureAdUser.PreferredLanguage
+                };
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+    }
+}

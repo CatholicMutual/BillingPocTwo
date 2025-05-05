@@ -1,0 +1,6 @@
+@BillingPocTwo.Auth.Entra_HostAddress = http://localhost:5042
+
+GET {{BillingPocTwo.Auth.Entra_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

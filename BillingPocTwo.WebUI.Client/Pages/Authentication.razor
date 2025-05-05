@@ -1,0 +1,15 @@
+@page "/authentication/{action}"
+
+<RemoteAuthenticatorView Action="@Action" />
+
+@code {
+    [Parameter] public string? Action { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrEmpty(Action))
+        {
+            Action = "login"; // or some safe default
+        }
+    }
+}
