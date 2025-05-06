@@ -1,9 +1,14 @@
 @page "/authentication/{action}"
 
-<RemoteAuthenticatorView Action="@Action" />
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<RemoteAuthenticatorView Action="@Action" OnLogInSucceeded="HandleLoginSuccess" />
 
 @code {
     [Parameter] public string? Action { get; set; }
+
+    private List<string> userRoles = new();
 
     protected override void OnParametersSet()
     {
@@ -12,4 +17,46 @@
             Action = "login"; // or some safe default
         }
     }
+
+    private async Task HandleLoginSuccess()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated ?? false)
+        {
+            // Extract roles from the claims
+            userRoles = user.Claims
+                .Where(c => c.Type == "roles" || c.Type == "appRoles" || c.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role") 
+                .SelectMany(c => ParseRolesFromClaim(c.Value))
+                .Select(c => c.ToLower())
+                .ToList();
+
+            Console.WriteLine($"User roles: {string.Join(", ", userRoles)}");
+
+            // Redirect based on roles
+            if (userRoles.Contains("admin") || userRoles.Contains("user"))
+            {
+                NavigationManager.NavigateTo("/welcome2");
+            }
+            else
+            {
+                NavigationManager.NavigateTo("/access-denied");
+            }
+        }
+    }
+
+    private IEnumerable<string> ParseRolesFromClaim(string claimValue)
+    {
+        try
+        {
+            // Attempt to parse the claim value as a JSON array
+            return System.Text.Json.JsonSerializer.Deserialize<List<string>>(claimValue) ?? new List<string>();
+        }
+        catch
+        {
+            // If parsing fails, treat the claim value as a single role
+            return new List<string> { claimValue };
+    }
+}
 }

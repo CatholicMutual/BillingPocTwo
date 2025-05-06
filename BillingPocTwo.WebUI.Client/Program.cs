@@ -38,6 +38,7 @@ builder.Services.AddMsalAuthentication(options =>
     options.ProviderOptions.DefaultAccessTokenScopes.Add("profile");
     options.ProviderOptions.DefaultAccessTokenScopes.Add("offline_access");
     options.ProviderOptions.Authentication.PostLogoutRedirectUri = "/";
+    options.UserOptions.RoleClaim = "roles";
 });
 
 // Add Blazored LocalStorage

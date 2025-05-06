@@ -12,7 +12,7 @@
 
 <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
     <nav class="nav flex-column">
-        @if (isAuthenticated)
+        @if (isAuthenticated && userRoles.Any())
         {
             <h5 class="px-3" style="color: #cccccc;">Billing Tools:</h5>
             <div class="nav-item px-3">
@@ -31,6 +31,18 @@
                 </div>
             </div>
         }
+        else if (isAuthenticated)
+        {
+            <div class="px-3">
+                <p style="color: #cccccc;">You do not have the required roles to access the menu.</p>
+            </div>
+        }
+        else
+        {
+            <div class="px-3">
+                <p style="color: #cccccc;">Please log in to access the menu.</p>
+            </div>
+        }
     </nav>
 </div>
 
@@ -39,6 +51,7 @@
     private bool collapseAccountMenu = true;
     private bool collapseBillingMenu = true;
     private bool isAuthenticated;
+    private List<string> userRoles = new();
 
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
     private string? BillingMenuCssClass => collapseBillingMenu ? "collapse" : null;
@@ -58,7 +71,37 @@
     private async Task UpdateAuthenticationState()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
         isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+
+        isAuthenticated = user.Identity?.IsAuthenticated ?? false;
+
+        if (isAuthenticated)
+        {
+            // Extract roles from the claims
+            userRoles = user.Claims
+                .Where(c => c.Type == "roles" || c.Type == "appRoles" || c.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role")
+                .SelectMany(c => ParseRolesFromClaim(c.Value))
+                .ToList();
+        }
+        else
+        {
+            userRoles.Clear();
+        }
+    }
+
+    private IEnumerable<string> ParseRolesFromClaim(string claimValue)
+    {
+        try
+        {
+            // Attempt to parse the claim value as a JSON array
+            return System.Text.Json.JsonSerializer.Deserialize<List<string>>(claimValue) ?? new List<string>();
+        }
+        catch
+        {
+            // If parsing fails, treat the claim value as a single role
+            return new List<string> { claimValue };
+        }
     }
 
     private string GetHomePageUrl()

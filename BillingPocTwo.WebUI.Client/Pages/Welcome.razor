@@ -1,6 +1,22 @@
 ﻿@page "/"
+
 @inherits LayoutComponentBase
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <h3>Welcome to BillingPocTwo</h3>
 <p>This is the welcome page. Anyone can see this page.</p>
 
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated ?? false)
+        {
+            // Redirect authenticated users to Welcome2.razor
+            NavigationManager.NavigateTo("/welcome2");
+        }
+    }
+}
