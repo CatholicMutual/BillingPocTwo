@@ -3,11 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.13.35919.96
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BillingPocTwo.Auth.Api", "BillingPocTwo.Auth.Api\BillingPocTwo.Auth.Api.csproj", "{365629D9-8C32-43EC-B3DE-A3BA4DD33124}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BillingPocTwo.WebUI.Client", "BillingPocTwo.WebUI.Client\BillingPocTwo.WebUI.Client.csproj", "{7F83558C-6DF2-4FE4-A91F-14A2F539814D}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BillingPocTwo.Auth.Api.Test", "BillingPocTwo.Auth.Api.Test\BillingPocTwo.Auth.Api.Test.csproj", "{8DBA2468-45D6-42BE-B98B-186F1AFCD436}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BillingPocTwo.Shared", "BillingPocTwo.Shared\BillingPocTwo.Shared.csproj", "{4117BBFC-7B12-4EC6-A282-8C2B34E9B345}"
 EndProject
@@ -23,18 +19,10 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{365629D9-8C32-43EC-B3DE-A3BA4DD33124}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{365629D9-8C32-43EC-B3DE-A3BA4DD33124}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{365629D9-8C32-43EC-B3DE-A3BA4DD33124}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{365629D9-8C32-43EC-B3DE-A3BA4DD33124}.Release|Any CPU.Build.0 = Release|Any CPU
 		{7F83558C-6DF2-4FE4-A91F-14A2F539814D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{7F83558C-6DF2-4FE4-A91F-14A2F539814D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7F83558C-6DF2-4FE4-A91F-14A2F539814D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7F83558C-6DF2-4FE4-A91F-14A2F539814D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8DBA2468-45D6-42BE-B98B-186F1AFCD436}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8DBA2468-45D6-42BE-B98B-186F1AFCD436}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8DBA2468-45D6-42BE-B98B-186F1AFCD436}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8DBA2468-45D6-42BE-B98B-186F1AFCD436}.Release|Any CPU.Build.0 = Release|Any CPU
 		{4117BBFC-7B12-4EC6-A282-8C2B34E9B345}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4117BBFC-7B12-4EC6-A282-8C2B34E9B345}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4117BBFC-7B12-4EC6-A282-8C2B34E9B345}.Release|Any CPU.ActiveCfg = Release|Any CPU

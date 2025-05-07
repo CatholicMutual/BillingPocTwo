@@ -16,19 +16,19 @@
         {
             <h5 class="px-3" style="color: #cccccc;">Billing Tools:</h5>
             <div class="nav-item px-3">
-                <button class="btn btn-link nav-link" @onclick="ToggleBillingMenu">
-                    <span class="bi bi-file-earmark-text" aria-hidden="true"></span> Billing
-                </button>
-                <div class="@BillingMenuCssClass">
-                    <NavLink class="nav-link" href="entity-register">
-                        <span class="bi bi-list" aria-hidden="true"></span> Entity Register
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="search">
-                        <span class="bi bi-search" aria-hidden="true"></span> Search
-                    </NavLink>
-                </div>
+                <NavLink class="nav-link" href="accounts-register">
+                    <span class="bi bi-list" aria-hidden="true"></span> Accounts Register
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="search">
+                    <span class="bi bi-search" aria-hidden="true"></span> Client Search
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="user-profile">
+                    <span class="bi bi-person" aria-hidden="true"></span> User Profile
+                </NavLink>
             </div>
         }
         else if (isAuthenticated)
@@ -47,87 +47,67 @@
 </div>
 
 @code {
-    private bool collapseNavMenu = true;
-    private bool collapseAccountMenu = true;
-    private bool collapseBillingMenu = true;
-    private bool isAuthenticated;
-    private List<string> userRoles = new();
+    @code {
+        private bool collapseNavMenu = true;
+        private bool isAuthenticated;
+        private List<string> userRoles = new();
 
-    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
-    private string? BillingMenuCssClass => collapseBillingMenu ? "collapse" : null;
+        private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
 
-    protected override async Task OnInitializedAsync()
-    {
-        AuthenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
-        await UpdateAuthenticationState();
-    }
-
-    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
-    {
-        await UpdateAuthenticationState();
-        StateHasChanged();
-    }
-
-    private async Task UpdateAuthenticationState()
-    {
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-        isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
-
-        isAuthenticated = user.Identity?.IsAuthenticated ?? false;
-
-        if (isAuthenticated)
+        protected override async Task OnInitializedAsync()
         {
-            // Extract roles from the claims
-            userRoles = user.Claims
-                .Where(c => c.Type == "roles" || c.Type == "appRoles" || c.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role")
-                .SelectMany(c => ParseRolesFromClaim(c.Value))
-                .ToList();
+            AuthenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+            await UpdateAuthenticationState();
         }
-        else
+
+        private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
         {
-            userRoles.Clear();
+            await UpdateAuthenticationState();
+            StateHasChanged();
         }
-    }
 
-    private IEnumerable<string> ParseRolesFromClaim(string claimValue)
-    {
-        try
+        private async Task UpdateAuthenticationState()
         {
-            // Attempt to parse the claim value as a JSON array
-            return System.Text.Json.JsonSerializer.Deserialize<List<string>>(claimValue) ?? new List<string>();
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+
+            if (isAuthenticated)
+            {
+                // Extract roles from the claims
+                userRoles = user.Claims
+                    .Where(c => c.Type == "roles" || c.Type == "appRoles" || c.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role")
+                    .SelectMany(c => ParseRolesFromClaim(c.Value))
+                    .ToList();
+            }
+            else
+            {
+                userRoles.Clear();
+            }
         }
-        catch
+
+        private IEnumerable<string> ParseRolesFromClaim(string claimValue)
         {
-            // If parsing fails, treat the claim value as a single role
-            return new List<string> { claimValue };
+            try
+            {
+                // Attempt to parse the claim value as a JSON array
+                return System.Text.Json.JsonSerializer.Deserialize<List<string>>(claimValue) ?? new List<string>();
+            }
+            catch
+            {
+                // If parsing fails, treat the claim value as a single role
+                return new List<string> { claimValue };
+            }
+        }
+
+        private string GetHomePageUrl()
+        {
+            return isAuthenticated ? "/welcome2" : "/";
+        }
+
+        private void ToggleNavMenu()
+        {
+            collapseNavMenu = !collapseNavMenu;
         }
     }
-
-    private string GetHomePageUrl()
-    {
-        return isAuthenticated ? "/welcome2" : "/";
-    }
-
-    private void ToggleNavMenu()
-    {
-        collapseNavMenu = !collapseNavMenu;
-    }
-
-    private void ToggleAccountMenu()
-    {
-        collapseAccountMenu = !collapseAccountMenu;
-    }
-
-    private void ToggleBillingMenu()
-    {
-        collapseBillingMenu = !collapseBillingMenu;
-    }
-
-    // private async Task Logout()
-    // {
-    //     // SessionStorage.ClearAsync(); // optional
-    //     // LocalStorage.ClearAsync();   // optional
-    //     // Navigation.NavigateTo("authentication/logout", true);
-    // }
 }

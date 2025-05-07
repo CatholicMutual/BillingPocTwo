@@ -1,4 +1,5 @@
 ﻿@page "/search"
+@using BillingPocTwo.Shared.DataObjects.Billing
 
 @inject HttpClient Http
 @inject IHttpClientFactory HttpClientFactory
@@ -27,7 +28,9 @@ else if (SearchResults != null && SearchResults.Any())
                 @foreach (var result in SearchResults)
                 {
                     <li>
-                        <a href="/account-view/@result.SOURCE_SYSTEM_ENTITY_CODE">@result.FULL_NAME (@result.SOURCE_SYSTEM_ENTITY_CODE)</a>
+                        <button class="btn btn-link" @onclick="() => OpenModal(result)">
+                            @result.FULL_NAME (@result.SOURCE_SYSTEM_ENTITY_CODE)
+                        </button>
                     </li>
                 }
             </ul>
@@ -39,11 +42,39 @@ else if (!string.IsNullOrEmpty(ErrorMessage))
     <p class="text-danger">@ErrorMessage</p>
 }
 
+@if (ShowModal && SelectedAccount != null)
+{
+    <!--correct values will need to be supplied here-->
+    <DashboardModal 
+        AccountNumber="@SelectedAccount.SOURCE_SYSTEM_ENTITY_CODE"
+        AccountName="@SelectedAccount.FULL_NAME"
+        AccountAddress="N/A"
+        EliteStatus="N/A"
+        LastInvoiceDate="DateTime.Now"
+        LastInvoiceDueDate="DateTime.Now.AddDays(30)"
+        LastInvoiceAmount="0"
+        NextInvoiceDate="DateTime.Now.AddMonths(1)"
+        NextInvoiceDueDate="DateTime.Now.AddMonths(1).AddDays(30)"
+        NextInvoiceAmount="0"
+        PastDue="0"
+        CurrentDue="0"
+        AccountBalance="0"
+        AccountUnderWatch="No"
+        NoteDate="DateTime.Now"
+        NoteBy="System"
+        NoteText="No notes available"
+        OnClose="CloseModal">
+    </DashboardModal>
+}
+
 @code {
     private string SearchTerm = string.Empty;
     private bool IsLoading = false;
     private List<EntityDetailsDto>? SearchResults = null;
     private string? ErrorMessage = null;
+
+    private bool ShowModal = false;
+    private EntityDetailsDto? SelectedAccount = null;
 
     private async Task PerformSearch()
     {
@@ -133,4 +164,15 @@ else if (!string.IsNullOrEmpty(ErrorMessage))
     // {
     //     IsModalVisible = false;
     // }
+    private void OpenModal(EntityDetailsDto account)
+    {
+        SelectedAccount = account;
+        ShowModal = true;
+    }
+
+    private void CloseModal()
+    {
+        ShowModal = false;
+        SelectedAccount = null;
+    }
 }

@@ -1,0 +1,86 @@
+﻿@inject NavigationManager Navigation
+
+<div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0, 0, 0, 0.5);">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Dashboard - Account #@AccountNumber</h5>
+                <button type="button" class="close" @onclick="CloseModal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6>Customer Profile</h6>
+                        <p><strong>Name:</strong> @AccountName</p>
+                        <p><strong>Address:</strong> @AccountAddress</p>
+                        <p><strong>Elite Status:</strong> @EliteStatus</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>Last Invoice</h6>
+                        <p><strong>Invoice Date:</strong> @LastInvoiceDate</p>
+                        <p><strong>Invoice Due Date:</strong> @LastInvoiceDueDate</p>
+                        <p><strong>Invoice Amount:</strong> @LastInvoiceAmount</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>Next Invoice</h6>
+                        <p><strong>Invoice Date:</strong> @NextInvoiceDate</p>
+                        <p><strong>Invoice Due Date:</strong> @NextInvoiceDueDate</p>
+                        <p><strong>Invoice Amount:</strong> @NextInvoiceAmount</p>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <h6>Account Information</h6>
+                        <p><strong>Past Due:</strong> @PastDue</p>
+                        <p><strong>Current Due:</strong> @CurrentDue</p>
+                        <p><strong>Account Balance:</strong> @AccountBalance</p>
+                        <p><strong>Account Under Watch:</strong> @AccountUnderWatch</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Notes</h6>
+                        <p><strong>Date:</strong> @NoteDate</p>
+                        <p><strong>By:</strong> @NoteBy</p>
+                        <p><strong>Note:</strong> @NoteText</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="CloseModal">Close</button>
+                <button class="btn btn-primary" @onclick="NavigateToAccountView">View Account</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string AccountNumber { get; set; }
+    [Parameter] public string AccountName { get; set; }
+    [Parameter] public string AccountAddress { get; set; }
+    [Parameter] public string EliteStatus { get; set; }
+    [Parameter] public DateTime LastInvoiceDate { get; set; }
+    [Parameter] public DateTime LastInvoiceDueDate { get; set; }
+    [Parameter] public decimal LastInvoiceAmount { get; set; }
+    [Parameter] public DateTime NextInvoiceDate { get; set; }
+    [Parameter] public DateTime NextInvoiceDueDate { get; set; }
+    [Parameter] public decimal NextInvoiceAmount { get; set; }
+    [Parameter] public decimal PastDue { get; set; }
+    [Parameter] public decimal CurrentDue { get; set; }
+    [Parameter] public decimal AccountBalance { get; set; }
+    [Parameter] public string AccountUnderWatch { get; set; }
+    [Parameter] public DateTime NoteDate { get; set; }
+    [Parameter] public string NoteBy { get; set; }
+    [Parameter] public string NoteText { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private void CloseModal()
+    {
+        OnClose.InvokeAsync();
+    }
+
+    private void NavigateToAccountView()
+    {
+        Navigation.NavigateTo($"/account-view/{AccountNumber}");
+    }
+}

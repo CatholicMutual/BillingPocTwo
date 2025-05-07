@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BillingPocTwo.Shared.DataObjects
+namespace BillingPocTwo.Shared.DataObjects.UserAccount
 {
     public class UserProfileDto
     {
@@ -12,8 +12,6 @@ namespace BillingPocTwo.Shared.DataObjects
         public Guid UserId { get; set; }
         public string FirstName { get; set; }
         public string LastName { get; set; }
-        public bool Active { get; set; }
-        public bool ServiceUser { get; set; }
         public List<string> Roles { get; set; } = new List<string>();
     }
 }

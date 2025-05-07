@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BillingPocTwo.Shared.DataObjects
+namespace BillingPocTwo.Shared.DataObjects.Billing
 {
     public class EntityDetailsDto
     {

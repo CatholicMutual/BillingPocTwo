@@ -1,24 +1,29 @@
 ﻿@page "/user-profile"
+@using BillingPocTwo.Shared.DataObjects.UserAccount
 
-@inject HttpClient Http
-@inject IHttpClientFactory HttpClientFactory
+@inject GraphServiceClient GraphServiceClient
 @inject NavigationManager Navigation
-@inject ISessionStorageService SessionStorage
-@* @inject AuthenticationStateProvider AuthenticationStateProvider *@
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 @attribute [Authorize]
 
 <h3>User Profile</h3>
 
-@if (userProfile != null)
+@if (isLoading)
+{
+    <p>Loading...</p>
+}
+else if (!string.IsNullOrEmpty(message))
+{
+    <p>@message</p>
+}
+else if (userProfile != null)
 {
     <div>
         <p><strong>First Name:</strong> @userProfile.FirstName</p>
         <p><strong>Last Name:</strong> @userProfile.LastName</p>
         <p><strong>Email:</strong> @userProfile.Email</p>
         <p><strong>User ID:</strong> @userProfile.UserId</p>
-        <p><strong>Active:</strong> @(userProfile.Active ? "Yes" : "No")</p>
-        <p><strong>Service User:</strong> @(userProfile.ServiceUser ? "Yes" : "No")</p>
         <p><strong>Active Roles:</strong></p>
         <ul>
             @foreach (var role in userProfile.Roles)
@@ -28,65 +33,164 @@
         </ul>
     </div>
 }
-else if (isLoading)
+
+@if (isAdmin)
 {
-    <p>Loading...</p>
-}
-else
-{
-    <p>@message</p>
+    <div>
+        <h4>Search for a User</h4>
+        <input @bind="searchEmail" placeholder="Enter user email" />
+        <button @onclick="SearchUser">Search</button>
+    </div>
 }
 
 @code {
     private UserProfileDto userProfile;
-    public string message = string.Empty;
+    private string message = string.Empty;
     private bool isLoading = false;
+    private bool isAdmin = false;
+    private string searchEmail = string.Empty;
 
-    // protected override async Task OnInitializedAsync()
-    // {
-    //     await LoadUserProfile();
-    // }
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckUserRole();
+        await LoadUserProfile();
+    }
 
-    // public async Task LoadUserProfile()
-    // {
-    //     isLoading = true;
+    private async Task CheckUserRole()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
 
-    //     var token = await SessionStorage.GetItemAsync<string>("AccessToken");
-    //     if (string.IsNullOrEmpty(token))
-    //     {
-    //         message = "User is not authenticated";
-    //         isLoading = false;
-    //          StateHasChanged();
-    //         return;
-    //     }
+        isAdmin = user.IsInRole("[\"Admin\"]");
+    }
 
-    //     var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-    //     var user = authState.User;
-    //     var email = user.FindFirst(c => c.Type == ClaimTypes.Email || c.Type == "email")?.Value;
+    private async Task LoadUserProfile()
+    {
+        isLoading = true;
 
-    //     if (string.IsNullOrEmpty(email))
-    //     {
-    //         message = "Failed to retrieve user email";
-    //         isLoading = false;
-    //         StateHasChanged();
-    //         return;
-    //     }
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var email = user.FindFirst(c =>
+            c.Type == "email" ||
+            c.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress" ||
+            c.Type == "preferred_username")?.Value;
 
-    //     var client = HttpClientFactory.CreateClient("AuthApi");
+        if (string.IsNullOrEmpty(email))
+        {
+            message = "Failed to retrieve user email.";
+            isLoading = false;
+            return;
+        }
 
-    //     var request = new HttpRequestMessage(HttpMethod.Get, $"api/auth/user-profile/{email}");
-    //     request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        await FetchUserProfile(email);
+    }
 
-    //     var response = await client.SendAsync(request);
-    //     if (response.IsSuccessStatusCode)
-    //     {
-    //         userProfile = await response.Content.ReadFromJsonAsync<UserProfileDto>();
-    //     }
-    //     else
-    //     {
-    //         message = "Failed to load user profile";
-    //     }
-    //     isLoading = false;
-    //     StateHasChanged();
-    // }
+    private async Task SearchUser()
+    {
+        if (string.IsNullOrEmpty(searchEmail))
+        {
+            message = "Please enter an email to search.";
+            return;
+        }
+
+        try
+        {
+            isLoading = true;
+
+            // Use GraphServiceClient to fetch user details from Azure AD
+            var azureAdUser = await GraphServiceClient.Users[searchEmail].GetAsync();
+
+            // Fetch the user's app role assignments
+            var appRoleAssignments = await GraphServiceClient.Users[searchEmail].AppRoleAssignments.GetAsync();
+
+            var roleNames = new List<string>();
+            foreach (var appRoleAssignment in appRoleAssignments.Value)
+            {
+                // Check if the app role assignment is for this application
+                if (appRoleAssignment.ResourceDisplayName == "BillingPocTwo.WebUI.Auth") 
+                {
+                    // Map AppRoleId to role name
+                    if (Guid.TryParse(appRoleAssignment.AppRoleId.ToString(), out var appRoleId) &&
+                        AppRoleMappings.TryGetValue(appRoleId, out var roleName))
+                    {
+                        roleNames.Add(roleName);
+                    }
+                }
+            }
+
+            // Populate the user profile
+            userProfile = new UserProfileDto
+                {
+                    Email = azureAdUser.Mail ?? azureAdUser.UserPrincipalName,
+                    UserId = Guid.Parse(azureAdUser.Id),
+                    FirstName = azureAdUser.GivenName,
+                    LastName = azureAdUser.Surname,
+                    Roles = roleNames
+                };
+
+            message = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            message = $"An error occurred while searching for the user: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task FetchUserProfile(string email)
+    {
+        try
+        {
+            // Use GraphServiceClient to fetch user details from Azure AD
+            var azureAdUser = await GraphServiceClient.Users[email].GetAsync();
+
+            // Fetch the user's app role assignments (requires User.Read.All or AppRoleAssignment.Read.All permission)
+            var appRoleAssignments = await GraphServiceClient.Users[email].AppRoleAssignments.GetAsync();
+
+            var roleNames = new List<string>();
+            foreach (var appRoleAssignment in appRoleAssignments.Value)
+            {
+                // Check if the app role assignment is for this application
+                if (appRoleAssignment.ResourceDisplayName == "BillingPocTwo.WebUI.Auth") 
+                {
+                    // Map AppRoleId to role name from static method below
+                    if (Guid.TryParse(appRoleAssignment.AppRoleId.ToString(), out var appRoleId) &&
+                        AppRoleMappings.TryGetValue(appRoleId, out var roleName))
+                    {
+                        roleNames.Add(roleName);
+                    }
+                }
+            }
+
+            userProfile = new UserProfileDto
+                {
+                    Email = azureAdUser.Mail ?? azureAdUser.UserPrincipalName,
+                    UserId = Guid.Parse(azureAdUser.Id),
+                    FirstName = azureAdUser.GivenName,
+                    LastName = azureAdUser.Surname,
+                    Roles = roleNames // Use app role names
+                };
+
+            message = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            message = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    // uses GUID in Entra to map to role name
+    private static readonly Dictionary<Guid, string> AppRoleMappings = new()
+    {
+        { Guid.Parse("8bc6503e-9e03-47a3-bd0b-53667ee2f83a"), "Admin" }, // GUID from app registration in Entra 
+        { Guid.Parse("70516a44-62b4-4698-bd3a-eb1111b87764"), "User" }  
+    };
 }
+

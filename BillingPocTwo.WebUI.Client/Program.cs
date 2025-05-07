@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components.Authorization;
 using BillingPocTwo.WebUI.Client.Services;
-using BillingPocTwo.Shared.Entities.Auth;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net.Http;
 using System;
@@ -20,7 +19,7 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
 
 // Register HttpClient for APIs
-builder.Services.AddHttpClient("AuthApi", client => client.BaseAddress = new Uri("https://localhost:7192/"));
+//builder.Services.AddHttpClient("AuthApi", client => client.BaseAddress = new Uri("https://localhost:7192/"));
 builder.Services.AddHttpClient("BillingDataApi", client => client.BaseAddress = new Uri("https://localhost:7251/"));
 builder.Services.AddHttpClient("BillingPocTwo.ServerAPI", client => client.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress))
     .AddHttpMessageHandler<BaseAddressAuthorizationMessageHandler>();
@@ -34,6 +33,8 @@ builder.Services.AddMsalAuthentication(options =>
     // Use either .default or resource-specific scopes, but not both
     options.ProviderOptions.DefaultAccessTokenScopes.Clear();
     options.ProviderOptions.DefaultAccessTokenScopes.Add("https://graph.microsoft.com/User.Read");
+    options.ProviderOptions.DefaultAccessTokenScopes.Add("User.ReadBasic.All");
+    options.ProviderOptions.DefaultAccessTokenScopes.Add("User.Read.All");
     options.ProviderOptions.DefaultAccessTokenScopes.Add("openid");
     options.ProviderOptions.DefaultAccessTokenScopes.Add("profile");
     options.ProviderOptions.DefaultAccessTokenScopes.Add("offline_access");
@@ -45,6 +46,6 @@ builder.Services.AddMsalAuthentication(options =>
 builder.Services.AddBlazoredSessionStorage();
 
 // Register UserState
-builder.Services.AddScoped<UserState>();
+//builder.Services.AddScoped<UserState>();
 
 await builder.Build().RunAsync();
