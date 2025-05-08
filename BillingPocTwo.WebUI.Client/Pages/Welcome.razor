@@ -5,7 +5,7 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
 <h3>Welcome to BillingPocTwo</h3>
-<p>This is the welcome page. Anyone can see this page.</p>
+<p>Login above using your Cathloic Mutual Group email and credentials to access the billing tools.</p>
 
 @code {
     protected override async Task OnInitializedAsync()
@@ -15,8 +15,8 @@
 
         if (user.Identity?.IsAuthenticated ?? false)
         {
-            // Redirect authenticated users to Welcome2.razor
-            NavigationManager.NavigateTo("/welcome2");
+            // Redirect authenticated users to the search page
+            NavigationManager.NavigateTo("/search");
         }
     }
 }
