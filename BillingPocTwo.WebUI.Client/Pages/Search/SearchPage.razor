@@ -44,27 +44,7 @@ else if (!string.IsNullOrEmpty(ErrorMessage))
 
 @if (ShowModal && SelectedAccount != null)
 {
-    <!--correct values will need to be supplied here-->
-    <DashboardModal 
-        AccountNumber="@SelectedAccount.SOURCE_SYSTEM_ENTITY_CODE"
-        AccountName="@SelectedAccount.FULL_NAME"
-        AccountAddress="N/A"
-        EliteStatus="N/A"
-        LastInvoiceDate="DateTime.Now"
-        LastInvoiceDueDate="DateTime.Now.AddDays(30)"
-        LastInvoiceAmount="0"
-        NextInvoiceDate="DateTime.Now.AddMonths(1)"
-        NextInvoiceDueDate="DateTime.Now.AddMonths(1).AddDays(30)"
-        NextInvoiceAmount="0"
-        PastDue="0"
-        CurrentDue="0"
-        AccountBalance="0"
-        AccountUnderWatch="No"
-        NoteDate="DateTime.Now"
-        NoteBy="System"
-        NoteText="No notes available"
-        OnClose="CloseModal">
-    </DashboardModal>
+    <DashboardModal AccountNumber="@SelectedAccount.SOURCE_SYSTEM_ENTITY_CODE" OnClose="CloseModal" class="@DashboardModalClass" />
 }
 
 @code {
@@ -75,6 +55,8 @@ else if (!string.IsNullOrEmpty(ErrorMessage))
 
     private bool ShowModal = false;
     private EntityDetailsDto? SelectedAccount = null;
+
+    private string DashboardModalClass => ShowModal ? "dashboard-modal-overlay d-block" : "dashboard-modal-overlay d-none";
 
     private async Task PerformSearch()
     {
@@ -134,23 +116,6 @@ else if (!string.IsNullOrEmpty(ErrorMessage))
         return input.StartsWith("POL") && input.Length > 3; // Adjust logic as needed
     }
 
-    // private async Task ShowPolicyDetails(decimal policyTermId, string sourceSystemEntityCode)
-    // {
-    //     SelectedPolicy = null;
-    //     IsModalVisible = true;
-
-    //     var client = HttpClientFactory.CreateClient("BillingDataApi");
-
-    //     try
-    //     {
-    //         SelectedPolicy = await client.GetFromJsonAsync<POLICY_REGISTER>($"api/Policy/details/{sourceSystemEntityCode}/{policyTermId}");
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         Console.WriteLine($"Error: {ex.Message}");
-    //     }
-    // }
-
     private void OnSearchTermChanged(ChangeEventArgs e)
     {
         // Clear EntityDetails when the search term changes
@@ -160,10 +125,6 @@ else if (!string.IsNullOrEmpty(ErrorMessage))
         }
     }
 
-    // private void CloseModal()
-    // {
-    //     IsModalVisible = false;
-    // }
     private void OpenModal(EntityDetailsDto account)
     {
         SelectedAccount = account;

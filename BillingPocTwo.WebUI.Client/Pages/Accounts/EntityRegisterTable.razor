@@ -44,9 +44,9 @@ else
                     <td>@item.DOING_BUSINESS_AS_NAME</td>
                     <td>@item.ENTITY_TYPE</td>
                     <td>
-                        <a href="account-view/@item.SOURCE_SYSTEM_ENTITY_CODE">
+                        <button class="btn btn-link" @onclick="() => OpenDashboardModal(item.SOURCE_SYSTEM_ENTITY_CODE)">
                             @item.SOURCE_SYSTEM_ENTITY_CODE
-                        </a>
+                        </button>
                     </td>
                     <td>@item.BALANCE</td>
                 </tr>
@@ -74,9 +74,14 @@ else
             <p><strong>Full Name:</strong> @SelectedEntityAddress.FULL_NAME</p>
         }
     </Modal>
+
+    <DashboardModal AccountNumber="@SelectedAccountNumber" OnClose="CloseDashboardModal" class="@DashboardModalClass" />
+
 }
 
 @code {
+    private string DashboardModalClass => IsDashboardModalVisible ? "dashboard-modal-overlay d-block" : "dashboard-modal-overlay d-none";
+
     [Parameter]
     public string SearchTerm { get; set; } = string.Empty;
 
@@ -100,6 +105,10 @@ else
     private bool IsSortAscending { get; set; } = true; // Default sort direction
     private bool IsModalVisible { get; set; } = false;
     private ENTITY_ADDRESS_INFO SelectedEntityAddress { get; set; }
+
+    private bool IsDashboardModalVisible { get; set; } = false;
+    private string SelectedAccountNumber { get; set; } = string.Empty;
+
 
     protected override async Task OnParametersSetAsync()
     {
@@ -161,6 +170,19 @@ else
         }
     }
 
+    private void OpenDashboardModal(string accountNumber)
+    {
+        SelectedAccountNumber = accountNumber;
+
+
+        IsDashboardModalVisible = true;
+    }
+
+    private void CloseDashboardModal()
+    {
+        IsDashboardModalVisible = false;
+        SelectedAccountNumber = string.Empty;
+    }
 
     private async Task ApplyFilters()
     {

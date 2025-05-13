@@ -1,4 +1,5 @@
 ﻿using BillingPocTwo.BillingData.Api.Data;
+using BillingPocTwo.Shared.DataObjects.Billing;
 using BillingPocTwo.Shared.Entities.Billing;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -106,18 +107,23 @@ namespace BillingPocTwo.BillingData.Api.Controllers
                 .ToListAsync();
 
             // Step 4: Return the combined data
-            var result = new
+            var result = new AccountDetailsDto
             {
-                entityRegister.SYSTEM_ENTITY_CODE,
-                entityRegister.SOURCE_SYSTEM_ENTITY_CODE,
-                entityAddress?.FULL_NAME,
-                entityAddress?.CITY,
-                entityAddress?.STATE,
+                SYSTEM_ENTITY_CODE = entityRegister.SYSTEM_ENTITY_CODE,
+                SOURCE_SYSTEM_ENTITY_CODE = entityRegister.SOURCE_SYSTEM_ENTITY_CODE,
+                DOING_BUSINESS_AS_NAME = entityRegister.DOING_BUSINESS_AS_NAME,
+                FULL_NAME = entityAddress?.FULL_NAME,
+                ADDRESS1 = entityAddress?.ADDRESS1,
+                ADDRESS2 = entityAddress?.ADDRESS2,
+                CITY = entityAddress?.CITY,
+                STATE = entityAddress?.STATE,
+                ZIP_CODE = entityAddress?.ZIP_CODE,
                 PolicyTermIds = policyTermIds
             };
 
             return Ok(result);
         }
+
         [HttpGet("details/name/{name}")]
         public async Task<IActionResult> GetEntityDetailsByName(string name)
         {
@@ -232,5 +238,108 @@ namespace BillingPocTwo.BillingData.Api.Controllers
             return Ok(result);
         }
 
+        [HttpGet("last-invoice/{accountNumber}")]
+        public async Task<IActionResult> GetLastInvoiceDetails(string accountNumber)
+        {
+            // Step 1: Retrieve SYSTEM_ENTITY_CODE from ENTITY_REGISTER
+            var systemEntityCode = await _context.EntityRegisters
+                .Where(e => e.SOURCE_SYSTEM_ENTITY_CODE == accountNumber)
+                .Select(e => e.SYSTEM_ENTITY_CODE)
+                .FirstOrDefaultAsync();
+
+            if (systemEntityCode == 0)
+            {
+                return NotFound($"No entry found for account number: {accountNumber}");
+            }
+
+            // Step 2: Retrieve last invoice details from INT_BLNG_INQ_INV_DTL
+            var lastInvoice = await _context.INT_BLNG_INQ_INV_DTL
+                .Where(i => i.ACCOUNT_SYSTEM_CODE == systemEntityCode)
+                .OrderByDescending(i => i.LAST_INVOICE_DATE)
+                .Select(i => new LastInvoiceDto
+                {
+                    LastInvoiceAmount = i.LAST_INVOICE_AMT ?? 0,
+                    LastInvoiceDate = i.LAST_INVOICE_DATE == DateTime.MinValue ? null : i.LAST_INVOICE_DATE,
+                    LastInvoiceDueDate = i.LAST_INVOICE_DUE_DATE == DateTime.MinValue ? null : i.LAST_INVOICE_DUE_DATE
+                })
+                .FirstOrDefaultAsync();
+
+            if (lastInvoice == null)
+            {
+                return NotFound($"No invoice details found for account number: {accountNumber}");
+            }
+
+            return Ok(lastInvoice);
+        }
+
+        [HttpGet("next-invoice/{sourceSystemEntityCode}")]
+        public async Task<IActionResult> GetNextInvoiceDetails(string sourceSystemEntityCode)
+        {
+            // Step 1: Retrieve SYSTEM_ENTITY_CODE from ENTITY_REGISTER
+            var systemEntityCode = await _context.EntityRegisters
+                .Where(e => e.SOURCE_SYSTEM_ENTITY_CODE == sourceSystemEntityCode)
+                .Select(e => e.SYSTEM_ENTITY_CODE)
+                .FirstOrDefaultAsync();
+
+            if (systemEntityCode == 0)
+            {
+                return NotFound($"No entry found for account number: {sourceSystemEntityCode}");
+            }
+
+            // Step 2: Retrieve next invoice details from INT_BLNG_INQ_INV_DTL
+            var nextInvoice = await _context.INT_BLNG_INQ_INV_DTL
+                .Where(i => i.ACCOUNT_SYSTEM_CODE == systemEntityCode)
+                .OrderBy(i => i.NEXT_INST_DATE)
+                .Select(i => new NextInvoiceDto
+                {
+                    NextInvoiceAmount = i.NEXT_INST_DUE_AMT ?? 0,
+                    NextInvoiceDate = i.NEXT_INST_DATE == DateTime.MinValue ? null : i.NEXT_INST_DATE,
+                    NextInvoiceDueDate = i.NEXT_INS_DUE_DATE == DateTime.MinValue ? null : i.NEXT_INS_DUE_DATE
+                })
+                .FirstOrDefaultAsync();
+
+            if (nextInvoice == null)
+            {
+                return NotFound($"No next invoice details found for account number: {systemEntityCode}");
+            }
+
+            // Step 3: Return the data
+            return Ok(nextInvoice);
+        }
+
+        [HttpGet("acct-info/{sourceSystemEntityCode}")]
+        public async Task<IActionResult> GetAccountInfoDetails(string sourceSystemEntityCode)
+        {
+            // Step 1: Retrieve SYSTEM_ENTITY_CODE from ENTITY_REGISTER
+            var systemEntityCode = await _context.EntityRegisters
+                .Where(e => e.SOURCE_SYSTEM_ENTITY_CODE == sourceSystemEntityCode)
+                .Select(e => e.SYSTEM_ENTITY_CODE)
+                .FirstOrDefaultAsync();
+
+            if (systemEntityCode == 0)
+            {
+                return NotFound($"No entry found for account number: {sourceSystemEntityCode}");
+            }
+
+            // Step 2: Retrieve next invoice details from INT_BLNG_INQ_INV_DTL
+            var acctInfo = await _context.INT_BLNG_INQ_INV_DTL
+                .Where(i => i.ACCOUNT_SYSTEM_CODE == systemEntityCode)
+                .OrderBy(i => i.NEXT_INST_DATE)
+                .Select(i => new AccountInfoDto
+                {
+                    PAST_DUE_AMT = i.PAST_DUE_AMT ?? 0,
+                    CURRENT_MIN_AMT = i.CURRENT_MIN_DUE ?? 0,
+                    BALANCE = i.BALANCE ?? 0
+                })
+                .FirstOrDefaultAsync();
+
+            if (acctInfo == null)
+            {
+                return NotFound($"No next invoice details found for account number: {systemEntityCode}");
+            }
+
+            // Step 3: Return the data
+            return Ok(acctInfo);
+        }
     }
 }

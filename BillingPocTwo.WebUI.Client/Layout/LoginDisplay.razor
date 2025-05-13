@@ -4,6 +4,7 @@
 
 @if (isAuthenticated)
 {
+    <span>@userFullName&nbsp;&nbsp;</span>
     <button @onclick="BeginLogout">Logout</button>
 }
 else
@@ -13,6 +14,7 @@ else
 
 @code {
     private bool isAuthenticated;
+    private string? userFullName;
 
     protected override async Task OnInitializedAsync()
     {
@@ -22,15 +24,26 @@ else
 
     private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
     {
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+        await UpdateAuthenticationState();
         StateHasChanged();
     }
 
     private async Task UpdateAuthenticationState()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+        var user = authState.User;
+
+        isAuthenticated = user.Identity?.IsAuthenticated ?? false;
+
+        if (isAuthenticated)
+        {
+            // Retrieve the user's full name from the claims
+            userFullName = user.FindFirst("name")?.Value ?? "User";
+        }
+        else
+        {
+            userFullName = null;
+        }
     }
 
     private async Task BeginLogout()
