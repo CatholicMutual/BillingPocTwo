@@ -60,7 +60,7 @@ else
         <button class="btn btn-primary" @onclick="NextPage" disabled="@(!CanGoToNextPage)">Next</button>
     </div>
 
-    <Modal IsVisible="IsModalVisible" OnClose="CloseModal">
+    @* <Modal IsVisible="IsModalVisible" OnClose="CloseModal">
         @if (SelectedEntityAddress != null)
         {
             <h4>Entity Address Details</h4>
@@ -73,7 +73,7 @@ else
             <p><strong>ZIP Code:</strong> @SelectedEntityAddress.ZIP_CODE</p>
             <p><strong>Full Name:</strong> @SelectedEntityAddress.FULL_NAME</p>
         }
-    </Modal>
+    </Modal> *@
 
     <DashboardModal AccountNumber="@SelectedAccountNumber" OnClose="CloseDashboardModal" class="@DashboardModalClass" />
 
