@@ -173,5 +173,106 @@ namespace BillingPocTwo.BillingData.Api.Test
             Assert.IsType<BadRequestObjectResult>(result);
 
         }
+
+        [Fact]
+        public async Task GetActivePolicyByPolicyNumber_ReturnsOkResult_WithActivePolicies()
+        {
+            // Arrange: Add a policy with POLICY_NO = "ACTIVE123", SYSTEM_STATUS = "INFORCE", LEGAL_STATUS != "EXPIRED"
+            var activePolicy = new POLICY_REGISTER
+            {
+                POLICY_TERM_ID = 200,
+                POLICY_NO = "ACTIVE123",
+                APPLICATION_NO = "APP200",
+                CRT_CODE = "CRT3",
+                LEGAL_STATUS = "Active",
+                SYSTEM_STATUS = "INFORCE",
+                OPERATING_COMPANY = "COMP3",
+                PAYMENT_PLAN = "Annual",
+                PRODUCT_CODE = "PROD3",
+                STATE_CODE = "TX",
+                POLICY_RENEW_NO = 0,
+                INBOUND_TRANSACTION_SEQ = 0,
+                BROKER_SYSTEM_CODE = 0,
+                INSURED_SYSTEM_CODE = 0,
+                POLICY_EFFECTIVE_DATE = DateTime.UtcNow,
+                POLICY_EXPIRATION_DATE = DateTime.UtcNow.AddYears(1),
+                BILL_TO_SYSTEM_CODE = 0,
+                POLICY_ID = 200,
+                ROWID = Guid.NewGuid()
+            };
+            _dbContext.PolicyRegisters.Add(activePolicy);
+
+            // Add a policy with the same POLICY_NO but SYSTEM_STATUS != "INFORCE"
+            _dbContext.PolicyRegisters.Add(new POLICY_REGISTER
+            {
+                POLICY_TERM_ID = 201,
+                POLICY_NO = "ACTIVE123",
+                APPLICATION_NO = "APP201",
+                CRT_CODE = "CRT4",
+                LEGAL_STATUS = "Active",
+                SYSTEM_STATUS = "CANCELLED",
+                OPERATING_COMPANY = "COMP4",
+                PAYMENT_PLAN = "Annual",
+                PRODUCT_CODE = "PROD4",
+                STATE_CODE = "TX",
+                POLICY_RENEW_NO = 0,
+                INBOUND_TRANSACTION_SEQ = 0,
+                BROKER_SYSTEM_CODE = 0,
+                INSURED_SYSTEM_CODE = 0,
+                POLICY_EFFECTIVE_DATE = DateTime.UtcNow,
+                POLICY_EXPIRATION_DATE = DateTime.UtcNow.AddYears(1),
+                BILL_TO_SYSTEM_CODE = 0,
+                POLICY_ID = 201,
+                ROWID = Guid.NewGuid()
+            });
+
+            // Add a policy with the same POLICY_NO but LEGAL_STATUS == "EXPIRED"
+            _dbContext.PolicyRegisters.Add(new POLICY_REGISTER
+            {
+                POLICY_TERM_ID = 202,
+                POLICY_NO = "ACTIVE123",
+                APPLICATION_NO = "APP202",
+                CRT_CODE = "CRT5",
+                LEGAL_STATUS = "EXPIRED",
+                SYSTEM_STATUS = "INFORCE",
+                OPERATING_COMPANY = "COMP5",
+                PAYMENT_PLAN = "Annual",
+                PRODUCT_CODE = "PROD5",
+                STATE_CODE = "TX",
+                POLICY_RENEW_NO = 0,
+                INBOUND_TRANSACTION_SEQ = 0,
+                BROKER_SYSTEM_CODE = 0,
+                INSURED_SYSTEM_CODE = 0,
+                POLICY_EFFECTIVE_DATE = DateTime.UtcNow,
+                POLICY_EXPIRATION_DATE = DateTime.UtcNow.AddYears(1),
+                BILL_TO_SYSTEM_CODE = 0,
+                POLICY_ID = 202,
+                ROWID = Guid.NewGuid()
+            });
+
+            _dbContext.SaveChanges();
+
+            // Act
+            var result = await _controller.GetActivePolicyByPolicyNumber("ACTIVE123");
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var returnValue = Assert.IsType<List<POLICY_REGISTER>>(okResult.Value);
+            Assert.Single(returnValue);
+            Assert.Equal("ACTIVE123", returnValue[0].POLICY_NO);
+            Assert.Equal("INFORCE", returnValue[0].SYSTEM_STATUS);
+            Assert.NotEqual("EXPIRED", returnValue[0].LEGAL_STATUS);
+        }
+
+        [Fact]
+        public async Task GetActivePolicyByPolicyNumber_ReturnsNotFound_WhenNoActivePoliciesExist()
+        {
+            // Act
+            var result = await _controller.GetActivePolicyByPolicyNumber("DOESNOTEXIST");
+
+            // Assert
+            Assert.IsType<NotFoundObjectResult>(result);
+        }
+
     }
 }
