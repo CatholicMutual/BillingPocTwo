@@ -1,0 +1,83 @@
+﻿@page "/policy-details/{PolicyNo}"
+
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager NavigationManager
+
+<h3>Policy Details</h3>
+
+@if (IsLoading)
+{
+    <p>Loading...</p>
+}
+else if (ErrorMessage != null)
+{
+    <div class="alert alert-danger">@ErrorMessage</div>
+}
+else if (Policy != null)
+{
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Policy #: @Policy.POLICY_NO</h5>
+            <p><strong>Status:</strong> @Policy.SYSTEM_STATUS</p>
+            <p><strong>Legal Status:</strong> @Policy.LEGAL_STATUS</p>
+            <p><strong>Product:</strong> @Policy.PRODUCT_CODE</p>
+            <p><strong>Effective:</strong> @Policy.POLICY_EFFECTIVE_DATE.ToShortDateString()</p>
+            <p><strong>Expiration:</strong> @Policy.POLICY_EXPIRATION_DATE.ToShortDateString()</p>
+            <!-- Add more fields as needed -->
+        </div>
+    </div>
+}
+@if (AccountNumber != null)
+{
+    <button class="btn btn-secondary mb-3" @onclick="GoBackToAccount">Back to Account</button>
+}
+else
+{
+    <p>No policy found.</p>
+}
+
+@code {
+    [Parameter] public string PolicyNo { get; set; }
+    private string? AccountNumber;
+
+    private POLICY_REGISTER? Policy;
+    private bool IsLoading = true;
+    private string? ErrorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("accountNumber", out var accountNumber))
+        {
+            AccountNumber = accountNumber;
+        }
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("BillingDataApi");
+            var result = await client.GetFromJsonAsync<List<POLICY_REGISTER>>($"api/Policy/ByPolicyNumActive/{PolicyNo}");
+            Policy = result?.FirstOrDefault();
+            if (Policy == null)
+            {
+                ErrorMessage = "No active policy found for this policy number.";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error loading policy: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void GoBackToAccount()
+    {
+        if (!string.IsNullOrEmpty(AccountNumber))
+        {
+            NavigationManager.NavigateTo($"/account-view/{AccountNumber}");
+        }
+    }
+
+}

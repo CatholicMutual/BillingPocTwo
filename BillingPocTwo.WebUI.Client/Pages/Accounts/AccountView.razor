@@ -2,6 +2,7 @@
 
 @inject HttpClient Http
 @inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager NavigationManager
 
 @attribute [Authorize]
 
@@ -97,7 +98,11 @@
                         @foreach (var transaction in PagedTransactions)
                         {
                             <tr>
-                                <td>@transaction.POLICY_NO</td>
+                                <td>
+                                    <a href="#" @onclick="@(e => ShowPolicyDetails(transaction))" @onclick:preventDefault="true">
+                                        @transaction.POLICY_NO
+                                    </a>
+                                </td>
                                 <td>@transaction.TRANSACTION_TYPE</td>
                                 <td>@transaction.CREATED_ON?.ToShortDateString()</td>
                                 <td>@transaction.TRANSACTION_EFF_DATE.ToShortDateString()</td>
@@ -124,6 +129,32 @@
         </div>
     </div>
 </div>
+
+@if (ShowPolicyModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background:rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Policy Details</h5>
+                    <button type="button" class="btn-close" @onclick="ClosePolicyModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p><strong>Policy #:</strong> @SelectedPolicy?.POLICY_NO</p>
+                    <p><strong>Transaction Type:</strong> @SelectedPolicy?.TRANSACTION_TYPE</p>
+                    <p><strong>Entry Date:</strong> @SelectedPolicy?.CREATED_ON?.ToShortDateString()</p>
+                    <p><strong>Effective Date:</strong> @SelectedPolicy?.TRANSACTION_EFF_DATE.ToShortDateString()</p>
+                    <p><strong>Expiry Date:</strong> @SelectedPolicy?.TRANSACTION_EXPIRY_DATE?.ToShortDateString()</p>
+                    <p><strong>User:</strong> @SelectedPolicy?.CREATED_BY</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" @onclick="OpenPolicy">Open Policy</button>
+                    <button class="btn btn-secondary" @onclick="ClosePolicyModal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
     [Parameter] public string AccountNumber { get; set; }
@@ -158,6 +189,9 @@
     private bool SortAscending = true; // Default sort order
 
     private List<TransactionDto> Transactions = new();
+
+    private bool ShowPolicyModal = false;
+    private TransactionDto? SelectedPolicy;
 
     protected override async Task OnInitializedAsync()
     {
@@ -281,4 +315,26 @@
             builder.AddContent(0, icon);
         }
     };
+
+    private void ShowPolicyDetails(TransactionDto transaction)
+    {
+        SelectedPolicy = transaction;
+        ShowPolicyModal = true;
+    }
+
+    private void ClosePolicyModal()
+    {
+        ShowPolicyModal = false;
+        SelectedPolicy = null;
+    }
+
+    private void OpenPolicy()
+    {
+        if (SelectedPolicy?.POLICY_NO != null)
+        {
+            NavigationManager.NavigateTo($"/policy-details/{SelectedPolicy.POLICY_NO}?accountNumber={AccountNumber}");
+        }
+        ShowPolicyModal = false;
+    }
+
 }

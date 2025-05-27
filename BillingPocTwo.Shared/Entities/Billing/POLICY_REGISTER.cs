@@ -35,5 +35,6 @@ namespace BillingPocTwo.Shared.Entities.Billing
         public decimal? BALANCE { get; set; }
         public Guid ROWID { get; set; }
         public string? SUB_BILLTYPE { get; set; }
+        public string? SYSTEM_STATUS { get; set; }
     }
 }

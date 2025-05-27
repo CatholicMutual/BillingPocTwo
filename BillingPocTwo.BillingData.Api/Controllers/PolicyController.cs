@@ -133,5 +133,29 @@ namespace BillingPocTwo.BillingData.Api.Controllers
 
             return Ok(policy);
         }
+
+        // GET: api/Policy/ByPolicyNoActive/{policyNo}
+        [HttpGet("ByPolicyNumActive/{policyNo}")]
+        public async Task<IActionResult> GetActivePolicyByPolicyNumber(string policyNo)
+        {
+            if (string.IsNullOrWhiteSpace(policyNo))
+            {
+                return BadRequest("POLICY_NO cannot be null or empty.");
+            }
+
+            var policies = await _context.PolicyRegisters
+                .Where(pr => pr.POLICY_NO == policyNo
+                    && pr.SYSTEM_STATUS == "INFORCE"
+                    && pr.LEGAL_STATUS != "EXPIRED")
+                .ToListAsync();
+
+            if (!policies.Any())
+            {
+                return NotFound($"No active policies found for POLICY_NO: {policyNo}");
+            }
+
+            return Ok(policies);
+        }
+
     }
 }
