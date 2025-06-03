@@ -23,17 +23,17 @@ else if (Policy != null)
             <p><strong>Product:</strong> @Policy.PRODUCT_CODE</p>
             <p><strong>Effective:</strong> @Policy.POLICY_EFFECTIVE_DATE.ToShortDateString()</p>
             <p><strong>Expiration:</strong> @Policy.POLICY_EXPIRATION_DATE.ToShortDateString()</p>
-            <!-- Add more fields as needed -->
         </div>
     </div>
-}
-@if (AccountNumber != null)
-{
-    <button class="btn btn-secondary mb-3" @onclick="GoBackToAccount">Back to Account</button>
 }
 else
 {
     <p>No policy found.</p>
+}
+
+@if (AccountNumber != null)
+{
+    <button class="btn btn-secondary mb-3" @onclick="GoBackToAccount">Back to Account</button>
 }
 
 @code {
