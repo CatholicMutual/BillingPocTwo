@@ -1,9 +1,6 @@
 ﻿using BillingPocTwo.BillingData.Api.Data;
-using BillingPocTwo.Shared.Entities.Billing;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace BillingPocTwo.BillingData.Api.Controllers
 {

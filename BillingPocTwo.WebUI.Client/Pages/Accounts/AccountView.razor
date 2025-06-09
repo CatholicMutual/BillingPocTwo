@@ -109,7 +109,9 @@
                                                 <td>
                                                     @if (!string.IsNullOrWhiteSpace(transaction.PolicyNo))
                                                     {
-                                                        <a href="#" @onclick="() => ShowPolicyDetails(transaction.PolicyNo)">
+                                                        <a href="#"
+                                                           @onclick="(e => ShowPolicyDetails(transaction))"
+                                                           @onclick:preventDefault="true">
                                                             @transaction.PolicyNo
                                                         </a>
                                                     }
@@ -332,12 +334,21 @@
         }
     };
 
-    private void ShowPolicyDetails(string? policyNumber)
+    private void ShowPolicyDetails(ITransaction transaction)
     {
-        if (!string.IsNullOrWhiteSpace(policyNumber))
+        if (transaction != null)
         {
-            // Optionally, fetch and set SelectedPolicy here if needed
-            SelectedPolicyNumber = policyNumber;
+            // If you want to show more details, you may want to map/cast to TransactionDto or use the ITransaction directly
+            SelectedPolicy = new TransactionDto
+                {
+                    POLICY_NO = transaction.PolicyNo,
+                    TRANSACTION_TYPE = transaction.OriginalTransactionDescription,
+                    CREATED_ON = transaction.EntryDate,
+                    TRANSACTION_EFF_DATE = transaction.EffectiveDate,
+                // Set other fields as needed
+                // TRANSACTION_EXPIRY_DATE = ...,
+                // CREATED_BY = transaction.UserId,
+                };
             ShowPolicyModal = true;
         }
     }

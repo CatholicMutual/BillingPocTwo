@@ -160,6 +160,7 @@ namespace BillingPocTwo.BillingData.Api.Controllers
 
             return Ok(results);
         }
+
         [HttpGet("details/policy/{policyNumber}")]
         public async Task<IActionResult> GetEntityDetailsByPolicyNumber(string policyNumber)
         {
@@ -341,5 +342,44 @@ namespace BillingPocTwo.BillingData.Api.Controllers
             // Step 3: Return the data
             return Ok(acctInfo);
         }
+
+        [HttpGet("details/system/{systemEntityCode}")]
+        public async Task<IActionResult> GetEntityDetailsBySystemEntityCode(decimal systemEntityCode)
+        {
+            var entityRegister = await _context.EntityRegisters
+                .FirstOrDefaultAsync(e => e.SYSTEM_ENTITY_CODE == systemEntityCode);
+
+            if (entityRegister == null)
+            {
+                return NotFound($"No ENTITY_REGISTER found for SYSTEM_ENTITY_CODE: {systemEntityCode}");
+            }
+
+            var entityAddress = await _context.EntityAddresses
+                .FirstOrDefaultAsync(e => e.SYSTEM_ENTITY_CODE == entityRegister.SYSTEM_ENTITY_CODE);
+
+            var policyTermIds = await _context.PolicyEntityIntermediate
+                .Where(pe => pe.SYSTEM_ENTITY_CODE == entityRegister.SYSTEM_ENTITY_CODE)
+                .Select(pe => pe.POLICY_TERM_ID)
+                .ToListAsync();
+
+            var result = new
+            {
+                entityRegister.SYSTEM_ENTITY_CODE,
+                entityRegister.DOING_BUSINESS_AS_NAME,
+                entityRegister.ENTITY_TYPE,
+                entityRegister.SOURCE_SYSTEM_ENTITY_CODE,
+                entityRegister.BALANCE,
+                entityAddress?.FULL_NAME,
+                entityAddress?.ADDRESS1,
+                entityAddress?.ADDRESS2,
+                entityAddress?.CITY,
+                entityAddress?.STATE,
+                entityAddress?.ZIP_CODE,
+                PolicyTermIds = policyTermIds
+            };
+
+            return Ok(result);
+        }
+
     }
 }

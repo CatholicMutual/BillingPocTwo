@@ -15,6 +15,47 @@ else if (ErrorMessage != null)
 }
 else if (Policy != null)
 {
+    <div class="card mb-2">
+        <div class="card-body d-flex flex-wrap align-items-center justify-content-between">
+            <div>
+                <label class="me-2"><strong>Policy:</strong></label>
+                <span>@Policy?.POLICY_NO [@Policy?.POLICY_EFFECTIVE_DATE.ToShortDateString() - @Policy?.POLICY_EXPIRATION_DATE.ToShortDateString()]</span>
+            </div>
+            <div>
+                <label class="me-2"><strong>Policy #:</strong></label>
+                <span>@Policy?.POLICY_NO</span>
+            </div>
+            <div>
+                <label class="me-2"><strong>Insured:</strong></label>
+                <span>@InsuredName</span>
+            </div>
+            <div>
+                <label class="me-2"><strong>Account #:</strong></label>
+                <a href="@($"/account-view/{AccountNumber}")">@AccountNumber</a>
+            </div>
+        </div>
+    </div>
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item">
+            <a class="nav-link @(ActiveTab == "InsuredInfo" ? "active" : "")" @onclick='() => SetTab("InsuredInfo")'>Insured Info</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(ActiveTab == "PolicyInfo" ? "active" : "")" @onclick='() => SetTab("PolicyInfo")'>Policy Info</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(ActiveTab == "Balances" ? "active" : "")" @onclick='() => SetTab("Balances")'>Balances</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(ActiveTab == "CancellationHold" ? "active" : "")" @onclick='() => SetTab("CancellationHold")'>Cancellation / Hold</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(ActiveTab == "PolicyEntities" ? "active" : "")" @onclick='() => SetTab("PolicyEntities")'>Policy Entities</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(ActiveTab == "CommissionBalance" ? "active" : "")" @onclick='() => SetTab("CommissionBalance")'>Commission Balance</a>
+        </li>
+    </ul>
+
     <div class="card">
         <div class="card-body">
             <h5 class="card-title">Policy #: @Policy.POLICY_NO</h5>
@@ -36,13 +77,55 @@ else
     <button class="btn btn-secondary mb-3" @onclick="GoBackToAccount">Back to Account</button>
 }
 
+@if (ActiveTab == "InsuredInfo")
+{
+    <div class="row">
+        <div class="col-md-4">
+            <!-- Insured Info Card -->
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div><strong>Insured:</strong> @InsuredName</div>
+                    <!-- Add more insured info here -->
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <!-- Bill Info Card -->
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div><strong>Bill Type:</strong> Account Bill</div>
+                    <div><strong>Bill Sub Type:</strong> Chancery Bill</div>
+                    <div><strong>Due Day:</strong> 1</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <!-- Agency Info Card -->
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div><strong>Agency:</strong> <a href="#">BG-JIM GUDENRATH</a></div>
+                    <div><strong>Output Delivery Method:</strong> Mail</div>
+                    <div><strong>Invoicing Currency:</strong> US Dollar</div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+
 @code {
     [Parameter] public string PolicyNo { get; set; }
     private string? AccountNumber;
 
     private POLICY_REGISTER? Policy;
+    private ENTITY_REGISTER? InsuredEntity;
     private bool IsLoading = true;
     private string? ErrorMessage;
+
+    private string ActiveTab = "InsuredInfo";
+    private string? InsuredName;
+
+    private void SetTab(string tab) => ActiveTab = tab;
 
     protected override async Task OnInitializedAsync()
     {
@@ -56,10 +139,19 @@ else
         {
             var client = HttpClientFactory.CreateClient("BillingDataApi");
             var result = await client.GetFromJsonAsync<List<POLICY_REGISTER>>($"api/Policy/ByPolicyNumActive/{PolicyNo}");
+
+            var accountNumberResult = await client.GetFromJsonAsync<ENTITY_REGISTER>($"api/EntityRegister/details/policy/{PolicyNo}");
+            var accountDetailsResult = await client.GetFromJsonAsync<ENTITY_REGISTER>($"api/EntityRegister/details/system/{result.FirstOrDefault<POLICY_REGISTER>().BILL_TO_SYSTEM_CODE}");
+
             Policy = result?.FirstOrDefault();
             if (Policy == null)
             {
                 ErrorMessage = "No active policy found for this policy number.";
+            }
+            else
+            {
+                InsuredName = accountDetailsResult?.DOING_BUSINESS_AS_NAME;
+                AccountNumber = accountDetailsResult?.SOURCE_SYSTEM_ENTITY_CODE;
             }
         }
         catch (Exception ex)
