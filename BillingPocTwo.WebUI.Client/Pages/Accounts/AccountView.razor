@@ -69,63 +69,69 @@
                 <input type="date" id="toDate" class="form-control mr-3" @bind="ToDate" />
                 <button class="btn btn-primary" @onclick="LoadTransactions">View</button>
             </div>
-            <div class="accordion" id="transactionAccordion">
-                @foreach (var group in GroupedMappedTransactions)
-                {
-                    var safeTransactionType = group.Key.Replace(" ", "_").Replace("/", "_").Replace("\\", "_");
-                    var collapseId = $"collapse-{safeTransactionType}";
-                    var headingId = $"heading-{safeTransactionType}";
-                    <div class="accordion-item">
-                        <h2 class="accordion-header" id="@headingId">
-                            <div class="d-flex w-100 align-items-center">
-                                <button class="accordion-button collapsed flex-grow-1" type="button" data-bs-toggle="collapse" data-bs-target="#@collapseId" aria-expanded="false" aria-controls="@collapseId">
-                                    Transaction Type: @group.Key (Transactions: @group.Value.Count)
-                                </button>
-                            </div>
-                        </h2>
-                        <div id="@collapseId" class="accordion-collapse collapse" aria-labelledby="@headingId" data-bs-parent="#transactionAccordion">
-                            <div class="accordion-body">
-                                <table class="table table-sm">
-                                    <thead>
-                                        <tr>
-                                            <th>Type</th>
-                                            <th>Entry Date</th>
-                                            <th>Effective Date</th>
-                                            <th>User</th>
-                                            <th>Account #</th>
-                                            <th>Policy #</th>
-                                            <th>Description</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach (var transaction in group.Value)
-                                        {
-                                            <tr>
-                                                <td>@transaction.Type</td>
-                                                <td>@transaction.EntryDate.ToShortDateString()</td>
-                                                <td>@transaction.EffectiveDate.ToShortDateString()</td>
-                                                <td>@transaction.UserId</td>
-                                                <td>@AccountNumber</td>
-                                                <td>
-                                                    @if (!string.IsNullOrWhiteSpace(transaction.PolicyNo))
-                                                    {
-                                                        <a href="#"
-                                                           @onclick="(e => ShowPolicyDetails(transaction))"
-                                                           @onclick:preventDefault="true">
-                                                            @transaction.PolicyNo
-                                                        </a>
-                                                    }
-                                                </td>
-                                                <td>@transaction.OriginalTransactionDescription</td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                }
+            <div class="form-group mb-2">
+                <small class="text-muted">Search by policy, user, description, or year/date (e.g., 2020 or 01/01/2020)</small>
+                <input class="form-control" type="text" placeholder="Search transactions..." @bind="TransactionSearchTerm" @bind:event="oninput" />
             </div>
+
+            <div class="mb-2">
+                <button class="btn btn-outline-primary btn-sm me-2" @onclick="ExpandAllTransactionGroups">Expand All</button>
+                <button class="btn btn-outline-secondary btn-sm" @onclick="CollapseAllTransactionGroups">Collapse All</button>
+            </div>
+            <table class="table table-bordered table-sm">
+                <thead>
+                    <tr>
+                        <th>TRANSACTION TYPE</th>
+                        <th>TYPE</th>
+                        <th>ENTRY DATE</th>
+                        <th>EFFECTIVE DATE</th>
+                        <th>USER</th>
+                        <th>ACCOUNT #</th>
+                        <th>POLICY #</th>
+                        <th>DESCRIPTION</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var group in FilteredGroupedMappedTransactions)
+                    {
+                        var groupKey = group.Key;
+                        var isExpanded = ExpandedTransactionGroups.Contains(groupKey);
+                        <tr class="table-primary" style="cursor:pointer; font-size: 1rem;" @onclick="@(() => ToggleTransactionGroup(groupKey))">
+                            <td colspan="8">
+                                <span style="font-size:1.2em;display:inline-block;width:1.5em;text-align:center;">
+                                    @(isExpanded ? "–" : "+")
+                                </span>
+                                <b>@group.Key (Transactions: @group.Value.Count)</b>
+                            </td>
+                        </tr>
+                        @if (isExpanded)
+                        {
+                            foreach (var transaction in group.Value)
+                            {
+                                <tr>
+                                    <td></td>
+                                    <td>@transaction.Type</td>
+                                    <td>@transaction.EntryDate.ToShortDateString()</td>
+                                    <td>@transaction.EffectiveDate.ToShortDateString()</td>
+                                    <td>@transaction.UserId</td>
+                                    <td>@AccountNumber</td>
+                                    <td>
+                                        @if (!string.IsNullOrWhiteSpace(transaction.PolicyNo))
+                                        {
+                                            <a href="#"
+                                               @onclick="(e => ShowPolicyDetails(transaction))"
+                                               @onclick:preventDefault="true">
+                                                @transaction.PolicyNo
+                                            </a>
+                                        }
+                                    </td>
+                                    <td>@transaction.OriginalTransactionDescription</td>
+                                </tr>
+                            }
+                        }
+                    }
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
@@ -183,12 +189,12 @@
     private bool SortAscending = true; // Default sort order
 
     private List<TRANSACTION_LOG?> AccountTransactions;
-    // private List<TRANSACTION_LOG> TransactionLogs => AccountTransactions?.TransactionLogs ?? new();
-    // private List<ASSIGNED_PAYMENT> AssignedPayments => AccountTransactions?.AssignedPayments ?? new();
     private List<TransactionDto> Transactions = new();
 
     private bool ShowPolicyModal = false;
     private TransactionDto? SelectedPolicy;
+
+    private HashSet<string> ExpandedTransactionGroups = new();
 
     private List<ITransaction> MappedTransactions = new();
 
@@ -298,6 +304,42 @@
             builder.AddContent(0, icon);
         }
     };
+
+    private string TransactionSearchTerm { get; set; } = string.Empty;
+
+    private IEnumerable<KeyValuePair<string, List<ITransaction>>> FilteredGroupedMappedTransactions =>
+    string.IsNullOrWhiteSpace(TransactionSearchTerm)
+        ? GroupedMappedTransactions
+        : GroupedMappedTransactions
+            .Select(g => new KeyValuePair<string, List<ITransaction>>(
+                g.Key,
+                g.Value.Where(t =>
+                    (t.PolicyNo?.Contains(TransactionSearchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (t.OriginalTransactionDescription?.Contains(TransactionSearchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (t.UserId?.Contains(TransactionSearchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    t.EntryDate.ToString("yyyy-MM-dd").Contains(TransactionSearchTerm, StringComparison.OrdinalIgnoreCase) ||
+                    t.EntryDate.Year.ToString().Contains(TransactionSearchTerm, StringComparison.OrdinalIgnoreCase) ||
+                    t.EffectiveDate.ToString("yyyy-MM-dd").Contains(TransactionSearchTerm, StringComparison.OrdinalIgnoreCase) ||
+                    t.EffectiveDate.Year.ToString().Contains(TransactionSearchTerm, StringComparison.OrdinalIgnoreCase)
+                ).ToList()
+            ))
+            .Where(g => g.Value.Any());
+
+    private void ExpandAllTransactionGroups()
+    {
+        ExpandedTransactionGroups = GroupedMappedTransactions.Keys.ToHashSet();
+    }
+
+    private void CollapseAllTransactionGroups()
+    {
+        ExpandedTransactionGroups.Clear();
+    }
+
+    private void ToggleTransactionGroup(string groupKey)
+    {
+        if (!ExpandedTransactionGroups.Add(groupKey))
+            ExpandedTransactionGroups.Remove(groupKey);
+    }
 
     private void ShowPolicyDetails(ITransaction transaction)
     {

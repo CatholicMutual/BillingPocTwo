@@ -132,6 +132,18 @@ else
         }
         else
         {
+            <div class="form-group mb-2">
+                <small class="text-muted">Search by type, code, name, address, city, or year/date (e.g., 2020 or 01/01/2020)</small>
+                <input class="form-control" type="text"
+                       placeholder="Search policy entities..."
+                       value="@PolicyEntitySearchTerm"
+                       @oninput="OnPolicyEntitySearchChanged" />
+
+            </div>
+            <div class="mb-2">
+                <button class="btn btn-outline-primary btn-sm me-2" @onclick="ExpandAllAccordions">Expand All</button>
+                <button class="btn btn-outline-secondary btn-sm" @onclick="CollapseAllAccordions">Collapse All</button>
+            </div>
             <table class="table table-bordered table-sm">
                 <thead>
                     <tr>
@@ -149,45 +161,55 @@ else
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var typeGroup in PolicyEntities.GroupBy(e => e.ENTITY_TYPE))
+                    @foreach (var typeGroup in FilteredPolicyEntities.GroupBy(e => e.ENTITY_TYPE))
                     {
-                        var isExpanded = ExpandedEntityTypes.Contains(typeGroup.Key);
-                        <tr class="table-primary" style="cursor:pointer" @onclick="@(() => ToggleAccordion(typeGroup.Key))">
+                        var isTypeExpanded = ExpandedEntityTypes.Contains(typeGroup.Key);
+                        <tr class="table-primary" style="cursor:pointer" @onclick="@(() => ToggleTypeAccordion(typeGroup.Key))">
                             <td colspan="11">
                                 <span style="font-size:1.2em;display:inline-block;width:1.5em;text-align:center;">
-                                    @(isExpanded ? "–" : "+")
+                                    @(isTypeExpanded ? "–" : "+")
                                 </span>
-                                <b>@typeGroup.Key's Information</b>
+                                <b>@typeGroup.Key Information</b>
                             </td>
                         </tr>
-                        @if (isExpanded)
+                        @if (isTypeExpanded)
                         {
                             @foreach (var entityGroup in typeGroup.GroupBy(e => e.SYSTEM_ENTITY_CODE))
                             {
-                                <tr class="table-secondary">
+                                var entityKey = GetEntityCodeKey(typeGroup.Key, entityGroup.Key);
+                                var isEntityExpanded = ExpandedEntityCodes.Contains(entityKey);
+                                <tr class="table-secondary" style="cursor:pointer" @onclick="@(() => ToggleEntityAccordion(entityKey))">
                                     <td>@typeGroup.Key</td>
-                                    <td>@entityGroup.Key</td>
+                                    <td>
+                                        <span style="font-size:1.2em;display:inline-block;width:1.5em;text-align:center;">
+                                            @(isEntityExpanded ? "–" : "+")
+                                        </span>
+                                        @entityGroup.Key
+                                    </td>
                                     <td colspan="9"></td>
                                 </tr>
-                                @foreach (var entity in entityGroup)
+                                @if (isEntityExpanded)
                                 {
-                                    if (EntityAddresses.TryGetValue(entity.SYSTEM_ENTITY_CODE, out var addresses))
+                                    @foreach (var entity in entityGroup)
                                     {
-                                        foreach (var address in addresses)
+                                        if (EntityAddresses.TryGetValue(entity.SYSTEM_ENTITY_CODE, out var addresses))
                                         {
-                                            <tr>
-                                                <td></td>
-                                                <td></td>
-                                                <td>@address.ADDRESS_TYPE</td>
-                                                <td>@address.FULL_NAME</td>
-                                                <td>@($"{address.ADDRESS1} {address.ADDRESS2}")</td>
-                                                <td>@address.CITY</td>
-                                                <td>@address.STATE</td>
-                                                <td>@address.COUNTRY</td>
-                                                <td>@address.ZIP_CODE</td>
-                                                <td><!-- EMAIL ID here if available --></td>
-                                                <td><!-- PHONE NO here if available --></td>
-                                            </tr>
+                                            foreach (var address in addresses)
+                                            {
+                                                <tr>
+                                                    <td></td>
+                                                    <td></td>
+                                                    <td>@address.ADDRESS_TYPE</td>
+                                                    <td>@address.FULL_NAME</td>
+                                                    <td>@($"{address.ADDRESS1} {address.ADDRESS2}")</td>
+                                                    <td>@address.CITY</td>
+                                                    <td>@address.STATE</td>
+                                                    <td>@address.COUNTRY</td>
+                                                    <td>@address.ZIP_CODE</td>
+                                                    <td><!-- EMAIL ID here if available --></td>
+                                                    <td><!-- PHONE NO here if available --></td>
+                                                </tr>
+                                            }
                                         }
                                     }
                                 }
@@ -229,6 +251,8 @@ else
     private Dictionary<decimal, List<ENTITY_ADDRESS_INFO>> EntityAddresses = new();
     private bool IsPolicyEntitiesLoading = true;
     private HashSet<string> ExpandedEntityTypes = new();
+    private HashSet<string> ExpandedEntityCodes = new();
+    private string GetEntityCodeKey(string entityType, decimal entityCode) => $"{entityType}|{entityCode}";
 
     private void SetTab(string tab) => ActiveTab = tab;
 
@@ -316,10 +340,92 @@ else
         BillToCountry = addressResult.COUNTRY;
     }
 
-    private void ToggleAccordion(string entityType)
+    private string PolicyEntitySearchTerm { get; set; } = string.Empty;
+
+    private IEnumerable<POLICY_ENTITY_REGISTER> FilteredPolicyEntities =>
+    string.IsNullOrWhiteSpace(PolicyEntitySearchTerm)
+        ? PolicyEntities
+        : PolicyEntities.Where(e =>
+            (e.ENTITY_TYPE?.Contains(PolicyEntitySearchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (e.SYSTEM_ENTITY_CODE.ToString().Contains(PolicyEntitySearchTerm, StringComparison.OrdinalIgnoreCase)) ||
+            (EntityAddresses.TryGetValue(e.SYSTEM_ENTITY_CODE, out var addresses) &&
+                addresses.Any(a =>
+                    (a.ADDRESS_TYPE?.Contains(PolicyEntitySearchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (a.FULL_NAME?.Contains(PolicyEntitySearchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (a.ADDRESS1?.Contains(PolicyEntitySearchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (a.ADDRESS2?.Contains(PolicyEntitySearchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (a.CITY?.Contains(PolicyEntitySearchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (a.STATE?.Contains(PolicyEntitySearchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (a.COUNTRY?.Contains(PolicyEntitySearchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (a.ZIP_CODE?.Contains(PolicyEntitySearchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    // Date/year search for address fields if you have any date fields, e.g.:
+                    // (a.SomeDateField?.ToString("yyyy-MM-dd").Contains(PolicyEntitySearchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    // (a.SomeDateField?.Year.ToString().Contains(PolicyEntitySearchTerm, StringComparison.OrdinalIgnoreCase) ?? false)
+                    false // Remove or replace if you add date fields above
+                )
+            )
+        );
+
+    private void UpdateAccordionExpansionForSearch()
+    {
+        if (string.IsNullOrWhiteSpace(PolicyEntitySearchTerm))
+        {
+            // Collapse all if search is empty
+            ExpandedEntityTypes.Clear();
+            ExpandedEntityCodes.Clear();
+            return;
+        }
+
+        // Expand only types and codes that have matches in the filtered set
+        var filtered = FilteredPolicyEntities.ToList();
+        ExpandedEntityTypes = filtered
+            .Select(e => e.ENTITY_TYPE)
+            .Distinct()
+            .ToHashSet();
+
+        ExpandedEntityCodes = filtered
+            .Select(e => GetEntityCodeKey(e.ENTITY_TYPE, e.SYSTEM_ENTITY_CODE))
+            .Distinct()
+            .ToHashSet();
+    }
+
+    private void OnPolicyEntitySearchChanged(ChangeEventArgs e)
+    {
+        PolicyEntitySearchTerm = e.Value?.ToString() ?? string.Empty;
+        UpdateAccordionExpansionForSearch();
+    }
+
+    private void ExpandAllAccordions()
+    {
+        // Expand all entity types
+        ExpandedEntityTypes = PolicyEntities
+            .Select(e => e.ENTITY_TYPE)
+            .Distinct()
+            .ToHashSet();
+
+        // Expand all entity codes (type|code)
+        ExpandedEntityCodes = PolicyEntities
+            .Select(e => GetEntityCodeKey(e.ENTITY_TYPE, e.SYSTEM_ENTITY_CODE))
+            .Distinct()
+            .ToHashSet();
+    }
+
+    private void CollapseAllAccordions()
+    {
+        ExpandedEntityTypes.Clear();
+        ExpandedEntityCodes.Clear();
+    }
+
+    private void ToggleTypeAccordion(string entityType)
     {
         if (!ExpandedEntityTypes.Add(entityType))
             ExpandedEntityTypes.Remove(entityType);
+    }
+
+    private void ToggleEntityAccordion(string entityKey)
+    {
+        if (!ExpandedEntityCodes.Add(entityKey))
+            ExpandedEntityCodes.Remove(entityKey);
     }
 
     private void GoBackToAccount()
