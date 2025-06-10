@@ -126,12 +126,6 @@
                     </div>
                 }
             </div>
-
-            <!-- Pagination Controls -->
-            <div class="d-flex justify-content-between">
-                <button class="btn btn-secondary" @onclick="PreviousPage" disabled="@(!CanGoToPreviousPage)">Previous</button>
-                <button class="btn btn-secondary" @onclick="NextPage" disabled="@(!CanGoToNextPage)">Next</button>
-            </div>
         </div>
     </div>
 </div>
@@ -184,12 +178,6 @@
 
     private DateTime FromDate = DateTime.Now.AddYears(-5); // Default to 6 months ago
     private DateTime ToDate = DateTime.Now; // Default to today
-
-    private int CurrentPage = 1;
-    private int PageSize = 50;
-
-    private bool CanGoToPreviousPage => CurrentPage > 1;
-    private bool CanGoToNextPage => (CurrentPage * PageSize) < Transactions.Count;
 
     private string SortColumn = nameof(TransactionDto.CREATED_ON); // Default sort column
     private bool SortAscending = true; // Default sort order
@@ -264,7 +252,6 @@
     {
         try
         {
-            CurrentPage = 1;
             var client = HttpClientFactory.CreateClient("BillingDataApi");
             AccountTransactions = await client.GetFromJsonAsync<List<TRANSACTION_LOG>>(
                 $"api/Transactions/byaccountnumber/{AccountNumber}?fromDate={FromDate:yyyy-MM-dd}&toDate={ToDate:yyyy-MM-dd}");
@@ -288,22 +275,6 @@
         }
     }
 
-    private void NextPage()
-    {
-        if (CanGoToNextPage)
-        {
-            CurrentPage++;
-        }
-    }
-
-    private void PreviousPage()
-    {
-        if (CanGoToPreviousPage)
-        {
-            CurrentPage--;
-        }
-    }
-
     private void SortTransactions(string column)
     {
         if (SortColumn == column)
@@ -318,12 +289,6 @@
             SortAscending = true;
         }
     }
-
-    private List<TransactionDto> PagedTransactions => Transactions
-        .OrderByDynamic(SortColumn, SortAscending)
-        .Skip((CurrentPage - 1) * PageSize)
-        .Take(PageSize)
-        .ToList();
 
     private RenderFragment RenderSortIcon(string column) => builder =>
     {

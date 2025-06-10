@@ -39,6 +39,15 @@ namespace BillingPocTwo.BillingData.Api.Controllers
             return Ok(entityAddresses);
         }
 
+        [HttpGet("all/{systemEntityCode}")]
+        public async Task<ActionResult<List<ENTITY_ADDRESS_INFO>>> GetAllAddresses(decimal systemEntityCode)
+        {
+            var addresses = await _context.EntityAddresses
+                .Where(a => a.SYSTEM_ENTITY_CODE == systemEntityCode)
+                .ToListAsync();
+            return Ok(addresses);
+        }
+
         // Route: GET api/EntityAddress/addresses/{sourceSystemEntityCode}
         [HttpGet("addresses/{sourceSystemEntityCode}")]
         public async Task<IActionResult> GetAddressesBySourceSystemEntityCode(string sourceSystemEntityCode)

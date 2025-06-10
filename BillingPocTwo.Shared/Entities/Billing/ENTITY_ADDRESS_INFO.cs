@@ -16,6 +16,7 @@ namespace BillingPocTwo.Shared.Entities.Billing
         public string? CITY { get; set; }
         public string? STATE { get; set; }
         public string? ZIP_CODE { get; set; }
+        public string? COUNTRY { get; set; }
         public string FULL_NAME { get; set; }
         [Key]
         public decimal SEQ_ENTITY_ADDRESS_INFO { get; set; }

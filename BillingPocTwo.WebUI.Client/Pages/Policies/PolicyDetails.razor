@@ -22,8 +22,8 @@ else if (Policy != null)
                 <span>@Policy?.POLICY_NO [@Policy?.POLICY_EFFECTIVE_DATE.ToShortDateString() - @Policy?.POLICY_EXPIRATION_DATE.ToShortDateString()]</span>
             </div>
             <div>
-                <label class="me-2"><strong>Policy #:</strong></label>
-                <span>@Policy?.POLICY_NO</span>
+                <label class="me-2"><strong>Renewal:</strong></label>
+                <span>@Policy?.POLICY_RENEW_NO</span>
             </div>
             <div>
                 <label class="me-2"><strong>Insured:</strong></label>
@@ -56,7 +56,7 @@ else if (Policy != null)
         </li>
     </ul>
 
-    <div class="card">
+    @* <div class="card">
         <div class="card-body">
             <h5 class="card-title">Policy #: @Policy.POLICY_NO</h5>
             <p><strong>Status:</strong> @Policy.SYSTEM_STATUS</p>
@@ -65,7 +65,7 @@ else if (Policy != null)
             <p><strong>Effective:</strong> @Policy.POLICY_EFFECTIVE_DATE.ToShortDateString()</p>
             <p><strong>Expiration:</strong> @Policy.POLICY_EXPIRATION_DATE.ToShortDateString()</p>
         </div>
-    </div>
+    </div> *@
 }
 else
 {
@@ -85,7 +85,15 @@ else
             <div class="card mb-3">
                 <div class="card-body">
                     <div><strong>Insured:</strong> @InsuredName</div>
-                    <!-- Add more insured info here -->
+                    <div>@InsuredStreet</div>
+                    <div>@InsuredCity, @InsuredState @InsuredZip</div>
+                    <div>@InsuredCountry</div>
+                </div>
+                <div class="card-body">
+                    <div><strong>Bill To:</strong> @BillToName</div>
+                    <div>@BillToStreet</div>
+                    <div>@BillToCity, @BillToState @BillToZip</div>
+                    <div>@BillToCountry</div>
                 </div>
             </div>
         </div>
@@ -111,10 +119,90 @@ else
         </div>
     </div>
 }
-
+@if (ActiveTab == "PolicyEntities")
+{
+    <div>
+        @if (IsPolicyEntitiesLoading)
+        {
+            <p>Loading policy entities...</p>
+        }
+        else if (PolicyEntities.Count == 0)
+        {
+            <p>No policy entities found.</p>
+        }
+        else
+        {
+            <table class="table table-bordered table-sm">
+                <thead>
+                    <tr>
+                        <th>ENTITY TYPE</th>
+                        <th>ENTITY CODE</th>
+                        <th>ADDRESS TYPE</th>
+                        <th>NAME</th>
+                        <th>ADDRESS</th>
+                        <th>CITY</th>
+                        <th>STATE</th>
+                        <th>COUNTRY</th>
+                        <th>ZIP CODE</th>
+                        <th>EMAIL ID</th>
+                        <th>PHONE NO</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var typeGroup in PolicyEntities.GroupBy(e => e.ENTITY_TYPE))
+                    {
+                        var isExpanded = ExpandedEntityTypes.Contains(typeGroup.Key);
+                        <tr class="table-primary" style="cursor:pointer" @onclick="@(() => ToggleAccordion(typeGroup.Key))">
+                            <td colspan="11">
+                                <span style="font-size:1.2em;display:inline-block;width:1.5em;text-align:center;">
+                                    @(isExpanded ? "–" : "+")
+                                </span>
+                                <b>@typeGroup.Key's Information</b>
+                            </td>
+                        </tr>
+                        @if (isExpanded)
+                        {
+                            @foreach (var entityGroup in typeGroup.GroupBy(e => e.SYSTEM_ENTITY_CODE))
+                            {
+                                <tr class="table-secondary">
+                                    <td>@typeGroup.Key</td>
+                                    <td>@entityGroup.Key</td>
+                                    <td colspan="9"></td>
+                                </tr>
+                                @foreach (var entity in entityGroup)
+                                {
+                                    if (EntityAddresses.TryGetValue(entity.SYSTEM_ENTITY_CODE, out var addresses))
+                                    {
+                                        foreach (var address in addresses)
+                                        {
+                                            <tr>
+                                                <td></td>
+                                                <td></td>
+                                                <td>@address.ADDRESS_TYPE</td>
+                                                <td>@address.FULL_NAME</td>
+                                                <td>@($"{address.ADDRESS1} {address.ADDRESS2}")</td>
+                                                <td>@address.CITY</td>
+                                                <td>@address.STATE</td>
+                                                <td>@address.COUNTRY</td>
+                                                <td>@address.ZIP_CODE</td>
+                                                <td><!-- EMAIL ID here if available --></td>
+                                                <td><!-- PHONE NO here if available --></td>
+                                            </tr>
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+}
 
 @code {
     [Parameter] public string PolicyNo { get; set; }
+    private string? RenewalNumber;
     private string? AccountNumber;
 
     private POLICY_REGISTER? Policy;
@@ -124,6 +212,23 @@ else
 
     private string ActiveTab = "InsuredInfo";
     private string? InsuredName;
+    private string? InsuredStreet;
+    private string? InsuredCity;
+    private string? InsuredState;
+    private string? InsuredZip;
+    private string? InsuredCountry;
+
+    private string? BillToName;
+    private string? BillToStreet;
+    private string? BillToCity;
+    private string? BillToState;
+    private string? BillToZip;
+    private string? BillToCountry;
+
+    private List<POLICY_ENTITY_REGISTER> PolicyEntities = new();
+    private Dictionary<decimal, List<ENTITY_ADDRESS_INFO>> EntityAddresses = new();
+    private bool IsPolicyEntitiesLoading = true;
+    private HashSet<string> ExpandedEntityTypes = new();
 
     private void SetTab(string tab) => ActiveTab = tab;
 
@@ -140,7 +245,7 @@ else
             var client = HttpClientFactory.CreateClient("BillingDataApi");
             var result = await client.GetFromJsonAsync<List<POLICY_REGISTER>>($"api/Policy/ByPolicyNumActive/{PolicyNo}");
 
-            var accountNumberResult = await client.GetFromJsonAsync<ENTITY_REGISTER>($"api/EntityRegister/details/policy/{PolicyNo}");
+            var accountBillableResult = await client.GetFromJsonAsync<List<POLICY_ENTITY_REGISTER>>($"api/Policy/PolicyEntitiesByTermId/{result.FirstOrDefault<POLICY_REGISTER>().POLICY_TERM_ID}");
             var accountDetailsResult = await client.GetFromJsonAsync<ENTITY_REGISTER>($"api/EntityRegister/details/system/{result.FirstOrDefault<POLICY_REGISTER>().BILL_TO_SYSTEM_CODE}");
 
             Policy = result?.FirstOrDefault();
@@ -150,8 +255,24 @@ else
             }
             else
             {
-                InsuredName = accountDetailsResult?.DOING_BUSINESS_AS_NAME;
+                // Get all policy entities for this term
+                PolicyEntities = await client.GetFromJsonAsync<List<POLICY_ENTITY_REGISTER>>($"api/Policy/PolicyEntitiesByTermId/{Policy.POLICY_TERM_ID}");
+
+                // For each SYSTEM_ENTITY_CODE, get all addresses
+                foreach (var entity in PolicyEntities)
+                {
+                    if (!EntityAddresses.ContainsKey(entity.SYSTEM_ENTITY_CODE))
+                    {
+                        var addresses = await client.GetFromJsonAsync<List<ENTITY_ADDRESS_INFO>>(
+                            $"api/EntityAddress/all/{entity.SYSTEM_ENTITY_CODE}");
+                        EntityAddresses[entity.SYSTEM_ENTITY_CODE] = addresses ?? new List<ENTITY_ADDRESS_INFO>();
+                    }
+                }
+
                 AccountNumber = accountDetailsResult?.SOURCE_SYSTEM_ENTITY_CODE;
+
+                await SetInsuredDetails(accountBillableResult);
+                await SetBillableDetails(accountBillableResult);
             }
         }
         catch (Exception ex)
@@ -161,7 +282,44 @@ else
         finally
         {
             IsLoading = false;
+            IsPolicyEntitiesLoading = false;
         }
+    }
+
+    private async Task SetInsuredDetails(List<POLICY_ENTITY_REGISTER> policies)
+    {
+        var insuredEntityCode = policies.FirstOrDefault(e => e.ENTITY_TYPE == "INSURED").SYSTEM_ENTITY_CODE;
+
+        var client = HttpClientFactory.CreateClient("BillingDataApi");
+        var address = await client.GetFromJsonAsync<ENTITY_ADDRESS_INFO>($"api/EntityAddress/{insuredEntityCode}");
+
+        InsuredName = address.FULL_NAME;
+        InsuredStreet = address.ADDRESS1 + "\r" + address.ADDRESS2;
+        InsuredCity = address.CITY;
+        InsuredState = address.STATE;
+        InsuredZip = address.ZIP_CODE;
+        InsuredCountry = address.COUNTRY;
+    }
+
+    private async Task SetBillableDetails(List<POLICY_ENTITY_REGISTER> policies)
+    {
+        var billableEntityCode = policies.FirstOrDefault(e => e.BILLING_ENTITY_YN == "Y").SYSTEM_ENTITY_CODE;
+
+        var client = HttpClientFactory.CreateClient("BillingDataApi");
+        var addressResult = await client.GetFromJsonAsync<ENTITY_ADDRESS_INFO>($"api/EntityAddress/{billableEntityCode}");
+
+        BillToName = addressResult.FULL_NAME;
+        BillToStreet = addressResult.ADDRESS1 + "\r" + addressResult.ADDRESS2;
+        BillToCity = addressResult.CITY;
+        BillToState = addressResult.STATE;
+        BillToZip = addressResult.ZIP_CODE;
+        BillToCountry = addressResult.COUNTRY;
+    }
+
+    private void ToggleAccordion(string entityType)
+    {
+        if (!ExpandedEntityTypes.Add(entityType))
+            ExpandedEntityTypes.Remove(entityType);
     }
 
     private void GoBackToAccount()

@@ -1,4 +1,5 @@
 ﻿using BillingPocTwo.BillingData.Api.Data;
+using BillingPocTwo.Shared.Entities.Billing;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -152,6 +153,22 @@ namespace BillingPocTwo.BillingData.Api.Controllers
             }
 
             return Ok(policies);
+        }
+
+        // GET: api/Policy/PolicyEntitiesByTermId/{policyTermId}
+        [HttpGet("PolicyEntitiesByTermId/{policyTermId}")]
+        public async Task<ActionResult<List<POLICY_ENTITY_REGISTER>>> GetPolicyEntitiesByTermId(decimal policyTermId)
+        {
+            var entities = await _context.PolicyEntityIntermediate
+                .Where(pe => pe.POLICY_TERM_ID == policyTermId)
+                .ToListAsync();
+
+            if (entities == null || entities.Count == 0)
+            {
+                return NotFound($"No POLICY_ENTITY_REGISTER entries found for POLICY_TERM_ID: {policyTermId}");
+            }
+
+            return Ok(entities);
         }
 
     }
