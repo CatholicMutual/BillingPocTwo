@@ -16,7 +16,7 @@ namespace BillingPocTwo.Shared.DataObjects.Billing
         //public string? ACTION { get; set; }
         public DateTime TRANSACTION_EFF_DATE { get; set; }
         public DateTime? TRANSACTION_EXPIRY_DATE { get; set; }
-        //public decimal AMOUNT { get; set; }
+        public decimal? PAYMENT { get; set; }
         //public decimal BALANCE { get; set; }
         public string? CREATED_BY { get; set; }
         //public string? SOURCE_SYSTEM_ENTITY_CODE { get; set; }

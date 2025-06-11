@@ -243,4 +243,17 @@ code {
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     }
 
+.input-clear-btn {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 1.2em;
+    cursor: pointer;
+}
+
+
 

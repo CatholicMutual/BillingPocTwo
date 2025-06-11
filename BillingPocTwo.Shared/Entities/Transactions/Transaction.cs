@@ -17,5 +17,7 @@ namespace BillingPocTwo.Shared.Entities.Transactions
         public string AccountId { get; set; } = string.Empty;
         public string? OriginalTransactionDescription { get; set; } = string.Empty;
         public string? PolicyNo { get; set; }
+        public decimal? TransactionId { get; set; }
+        public decimal? Amount { get; set; }
     }
 }

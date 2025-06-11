@@ -26,6 +26,10 @@ else if (Policy != null)
                 <span>@Policy?.POLICY_RENEW_NO</span>
             </div>
             <div>
+                <label class="me-2"><strong>Term ID:</strong></label>
+                <span>@Policy?.POLICY_TERM_ID</span>
+            </div>
+            <div>
                 <label class="me-2"><strong>Insured:</strong></label>
                 <span>@InsuredName</span>
             </div>
@@ -53,6 +57,9 @@ else if (Policy != null)
         </li>
         <li class="nav-item">
             <a class="nav-link @(ActiveTab == "CommissionBalance" ? "active" : "")" @onclick='() => SetTab("CommissionBalance")'>Commission Balance</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(ActiveTab == "Transactions" ? "active" : "")" @onclick='() => SetTab("Transactions")'>Transactions</a>
         </li>
     </ul>
 
@@ -126,7 +133,7 @@ else
         {
             <p>Loading policy entities...</p>
         }
-        else if (PolicyEntities.Count == 0)
+        else if (!FilteredPolicyEntities.Any())
         {
             <p>No policy entities found.</p>
         }
@@ -134,11 +141,24 @@ else
         {
             <div class="form-group mb-2">
                 <small class="text-muted">Search by type, code, name, address, city, or year/date (e.g., 2020 or 01/01/2020)</small>
-                <input class="form-control" type="text"
-                       placeholder="Search policy entities..."
-                       value="@PolicyEntitySearchTerm"
-                       @oninput="OnPolicyEntitySearchChanged" />
-
+                <div style="position: relative; display: flex;">
+                    <input class="form-control" type="text"
+                           placeholder="Search policy entities..."
+                           value="@PolicyEntitySearchTerm"
+                           @oninput="OnPolicyEntitySearchChanged"
+                           style="padding-right: 2rem;" />
+                    @if (!string.IsNullOrEmpty(PolicyEntitySearchTerm))
+                    {
+                        <button type="button"
+                                class="input-clear-btn"
+                                style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); color: #888;"
+                                @onclick="() => { PolicyEntitySearchTerm = string.Empty; UpdateAccordionExpansionForSearch(); }"
+                                tabindex="-1"
+                                aria-label="Clear search">
+                            &#10005;
+                        </button>
+                    }
+                </div>
             </div>
             <div class="mb-2">
                 <button class="btn btn-outline-primary btn-sm me-2" @onclick="ExpandAllAccordions">Expand All</button>
@@ -221,6 +241,75 @@ else
         }
     </div>
 }
+@if (ActiveTab == "Transactions")
+{
+    <div>
+        <h5>Policy Transactions</h5>
+        <div class="form-group mb-2">
+            <small class="text-muted">Search by sequence, type, date, or user</small>
+            <div style="position: relative; display: flex;">
+                <input class="form-control" type="text"
+                       placeholder="Search transactions..."
+                       value="@TransactionSearchTerm"
+                       @oninput="OnTransactionSearchChanged"
+                       style="padding-right: 2rem;" />
+                @if (!string.IsNullOrEmpty(TransactionSearchTerm))
+                {
+                    <button type="button"
+                            class="input-clear-btn"
+                            style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); color: #888;"
+                            @onclick="() => TransactionSearchTerm = string.Empty"
+                            tabindex="-1"
+                            aria-label="Clear search">
+                        &#10005;
+                    </button>
+                }
+            </div>
+        </div>
+        @if (IsTransactionsLoading)
+        {
+            <p>Loading transactions...</p>
+        }
+        else if (!string.IsNullOrEmpty(TransactionsErrorMessage))
+        {
+            <div class="alert alert-danger">@TransactionsErrorMessage</div>
+        }
+        else if (PolicyTransactions.Count == 0)
+        {
+            <p>No transactions found for this policy.</p>
+        }
+        else
+        {
+            <table class="table table-bordered table-sm">
+                <thead>
+                    <tr>
+                        <th>Transaction Seq</th>
+                        <th>Type</th>
+                        <th>Entry Date</th>
+                        <th>Effective Date</th>
+                        <th>Expiry Date</th>
+                        <th>Amount</th>
+                        <th>Created By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var tx in FilteredPolicyTransactions)
+                    {
+                        <tr>
+                            <td>@tx.SYSTEM_TRANSACTION_SEQ</td>
+                            <td>@tx.TRANSACTION_TYPE</td>
+                            <td>@tx.CREATED_ON?.ToShortDateString()</td>
+                            <td>@tx.TRANSACTION_EFF_DATE.ToShortDateString()</td>
+                            <td>@tx.TRANSACTION_EXPIRY_DATE?.ToShortDateString()</td>
+                            <td>@((tx.PAYMENT.HasValue && tx.PAYMENT.Value != 0) ? tx.PAYMENT.Value.ToString("N2") : "")</td>
+                            <td>@tx.CREATED_BY</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+}
 
 @code {
     [Parameter] public string PolicyNo { get; set; }
@@ -247,6 +336,11 @@ else
     private string? BillToZip;
     private string? BillToCountry;
 
+    private List<TransactionDto> PolicyTransactions = new();
+    private bool IsTransactionsLoading = false;
+    private string? TransactionsErrorMessage;
+
+
     private List<POLICY_ENTITY_REGISTER> PolicyEntities = new();
     private Dictionary<decimal, List<ENTITY_ADDRESS_INFO>> EntityAddresses = new();
     private bool IsPolicyEntitiesLoading = true;
@@ -254,7 +348,14 @@ else
     private HashSet<string> ExpandedEntityCodes = new();
     private string GetEntityCodeKey(string entityType, decimal entityCode) => $"{entityType}|{entityCode}";
 
-    private void SetTab(string tab) => ActiveTab = tab;
+    private void SetTab(string tab)
+    {
+        ActiveTab = tab;
+        if (tab == "Transactions")
+        {
+            _ = LoadPolicyTransactionsAsync();
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -366,6 +467,52 @@ else
             )
         );
 
+    private async Task LoadPolicyTransactionsAsync()
+    {
+        if (Policy == null || string.IsNullOrWhiteSpace(Policy.POLICY_NO))
+            return;
+
+        IsTransactionsLoading = true;
+        TransactionsErrorMessage = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("BillingDataApi");
+            var url = $"api/Transactions/bypolicynumberandterm?policyNumber={Policy.POLICY_NO}&policyTermId={Policy.POLICY_TERM_ID}";
+            var result = await client.GetFromJsonAsync<List<TransactionDto>>(url);
+            PolicyTransactions = result ?? new List<TransactionDto>();
+        }
+        catch (Exception ex)
+        {
+            TransactionsErrorMessage = $"Error loading transactions: {ex.Message}";
+            PolicyTransactions = new List<TransactionDto>();
+        }
+        finally
+        {
+            IsTransactionsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private string TransactionSearchTerm { get; set; } = string.Empty;
+
+    private IEnumerable<TransactionDto> FilteredPolicyTransactions =>
+    string.IsNullOrWhiteSpace(TransactionSearchTerm)
+        ? PolicyTransactions
+        : PolicyTransactions.Where(tx =>
+            (tx.SYSTEM_TRANSACTION_SEQ.ToString().Contains(TransactionSearchTerm, StringComparison.OrdinalIgnoreCase)) ||
+            (tx.TRANSACTION_TYPE?.Contains(TransactionSearchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (tx.CREATED_ON?.ToShortDateString().Contains(TransactionSearchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (tx.TRANSACTION_EFF_DATE.ToShortDateString().Contains(TransactionSearchTerm, StringComparison.OrdinalIgnoreCase)) ||
+            (tx.TRANSACTION_EXPIRY_DATE?.ToShortDateString().Contains(TransactionSearchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (tx.PAYMENT != null && tx.PAYMENT.Value.ToString().Replace(",", "").Contains(TransactionSearchTerm.Replace(",", ""), StringComparison.OrdinalIgnoreCase)) ||
+            (tx.CREATED_BY?.Contains(TransactionSearchTerm, StringComparison.OrdinalIgnoreCase) ?? false)
+        );
+
+    private void OnTransactionSearchChanged(ChangeEventArgs e)
+    {
+        TransactionSearchTerm = e.Value?.ToString() ?? string.Empty;
+    }
+
     private void UpdateAccordionExpansionForSearch()
     {
         if (string.IsNullOrWhiteSpace(PolicyEntitySearchTerm))
@@ -374,6 +521,12 @@ else
             ExpandedEntityTypes.Clear();
             ExpandedEntityCodes.Clear();
             return;
+        }
+
+        if (!FilteredPolicyEntities.Any())
+        {
+            ExpandedEntityTypes.Clear();
+            ExpandedEntityCodes.Clear();
         }
 
         // Expand only types and codes that have matches in the filtered set

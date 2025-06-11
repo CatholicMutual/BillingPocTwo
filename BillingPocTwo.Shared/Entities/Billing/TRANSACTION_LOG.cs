@@ -15,6 +15,7 @@ namespace BillingPocTwo.Shared.Entities.Billing
         public string? POLICY_NO { get; set; }
         public string TRANSACTION_TYPE { get; set; }
         public string? PAYMENT_METHOD { get; set; }
+        public decimal? PAYMENT { get; set; }
         public DateTime? CREATED_ON { get; set; }
         //public string? ACTION { get; set; }
         public DateTime TRANSACTION_EFF_DATE { get; set; }

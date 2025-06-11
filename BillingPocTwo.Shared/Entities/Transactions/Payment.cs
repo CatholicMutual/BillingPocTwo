@@ -13,5 +13,8 @@ namespace BillingPocTwo.Shared.Entities.Transactions
         public decimal ReceivedAmount { get; set; }
         public string? OriginalTransactionDescription { get; set; }
         public string? PolicyNo { get; set; }
+        public decimal? TransactionId { get; set; }
+        public decimal? Amount { get; set; }
+
     }
 }

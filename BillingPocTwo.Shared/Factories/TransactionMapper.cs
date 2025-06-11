@@ -18,6 +18,7 @@ namespace BillingPocTwo.Shared.Factories
                 case OriginalTransactionType.PAYMENT_ADJUSTMENT:
                     return new Payment
                     {
+                        TransactionId = log.SYSTEM_TRANSACTION_SEQ,
                         Type = TransactionType.Payment,
                         EntryDate = log.CREATED_ON ?? DateTime.MinValue,
                         EffectiveDate = log.TRANSACTION_EFF_DATE,
@@ -25,25 +26,28 @@ namespace BillingPocTwo.Shared.Factories
                         AccountId = log.ACCOUNT_SYSTEM_CODE.ToString(),
                         ReceivedAmount = 0, // Set if you have an amount field
                         OriginalTransactionDescription = log.TRANSACTION_TYPE.ToString(),
-                        PolicyNo = string.IsNullOrWhiteSpace(log.POLICY_NO) ? string.Empty : log.POLICY_NO
+                        PolicyNo = string.IsNullOrWhiteSpace(log.POLICY_NO) ? string.Empty : log.POLICY_NO,
+                        Amount = log.PAYMENT ?? 0 // Assuming PAYMENT is the amount field
                     };
                 case OriginalTransactionType.BILL:
                 case OriginalTransactionType.BILL_DUE:
                 case OriginalTransactionType.EARNED_BILL:
                     return new Invoice
                     {
+                        TransactionId = log.SYSTEM_TRANSACTION_SEQ,
                         Type = TransactionType.Invoice,
                         EntryDate = log.CREATED_ON ?? DateTime.MinValue,
                         EffectiveDate = log.TRANSACTION_EFF_DATE,
                         UserId = log.CREATED_BY ?? "",
                         AccountId = log.ACCOUNT_SYSTEM_CODE.ToString(),
-                        Amount = 0, // Set if you have an amount field
+                        Amount = log.PAYMENT ?? 0, // Set if you have an amount field
                         OriginalTransactionDescription = log.TRANSACTION_TYPE.ToString(),
                         PolicyNo = string.IsNullOrWhiteSpace(log.POLICY_NO) ? string.Empty : log.POLICY_NO
                     };
                 case OriginalTransactionType.ENDORSEMENT:
                     return new Endorsement
                     {
+                        TransactionId = log.SYSTEM_TRANSACTION_SEQ,
                         Type = TransactionType.Endorsement,
                         EntryDate = log.CREATED_ON ?? DateTime.MinValue,
                         EffectiveDate = log.TRANSACTION_EFF_DATE,
@@ -52,11 +56,13 @@ namespace BillingPocTwo.Shared.Factories
                         AccountId = log.ACCOUNT_SYSTEM_CODE.ToString(),
                         // Set other amounts if available
                         OriginalTransactionDescription = log.TRANSACTION_TYPE.ToString(),
-                        PolicyNo = string.IsNullOrWhiteSpace(log.POLICY_NO) ? string.Empty : log.POLICY_NO
+                        PolicyNo = string.IsNullOrWhiteSpace(log.POLICY_NO) ? string.Empty : log.POLICY_NO,
+                        Amount = log.PAYMENT ?? 0
                     };
                 case OriginalTransactionType.NONMONEY_ENDORSEMENT:
                     return new NonMoneyEndorsement
                     {
+                        TransactionId = log.SYSTEM_TRANSACTION_SEQ,
                         Type = TransactionType.NonMoneyEndorsement,
                         EntryDate = log.CREATED_ON ?? DateTime.MinValue,
                         EffectiveDate = log.TRANSACTION_EFF_DATE,
@@ -64,11 +70,13 @@ namespace BillingPocTwo.Shared.Factories
                         UserId = log.CREATED_BY ?? "",
                         AccountId = log.ACCOUNT_SYSTEM_CODE.ToString(),
                         OriginalTransactionDescription = log.TRANSACTION_TYPE.ToString(),
-                        PolicyNo = string.IsNullOrWhiteSpace(log.POLICY_NO) ? string.Empty : log.POLICY_NO
+                        PolicyNo = string.IsNullOrWhiteSpace(log.POLICY_NO) ? string.Empty : log.POLICY_NO,
+                        Amount = log.PAYMENT ?? 0
                     };
                 case OriginalTransactionType.PAYMENT_TRANSFER_INTERNAL:
                     return new PaymentTransferInternal
                     {
+                        TransactionId = log.SYSTEM_TRANSACTION_SEQ,
                         Type = TransactionType.PaymentTransferInternal,
                         EntryDate = log.CREATED_ON ?? DateTime.MinValue,
                         EffectiveDate = log.TRANSACTION_EFF_DATE,
@@ -76,11 +84,13 @@ namespace BillingPocTwo.Shared.Factories
                         AccountId = log.ACCOUNT_SYSTEM_CODE.ToString(),
                         ReceivedAmount = 0, // Set if you have an amount field
                         OriginalTransactionDescription = log.TRANSACTION_TYPE.ToString(),
-                        PolicyNo = string.IsNullOrWhiteSpace(log.POLICY_NO) ? string.Empty : log.POLICY_NO
+                        PolicyNo = string.IsNullOrWhiteSpace(log.POLICY_NO) ? string.Empty : log.POLICY_NO,
+                        Amount = log.PAYMENT ?? 0
                     };
                 case OriginalTransactionType.RENEWAL:
                     return new Renewal
                     {
+                        TransactionId = log.SYSTEM_TRANSACTION_SEQ,
                         Type = TransactionType.Renewal,
                         EntryDate = log.CREATED_ON ?? DateTime.MinValue,
                         EffectiveDate = log.TRANSACTION_EFF_DATE,
@@ -89,18 +99,21 @@ namespace BillingPocTwo.Shared.Factories
                         AccountId = log.ACCOUNT_SYSTEM_CODE.ToString(),
                         // Set other amounts if available
                         OriginalTransactionDescription = log.TRANSACTION_TYPE.ToString(),
+                        Amount = log.PAYMENT ?? 0,
                         PolicyNo = string.IsNullOrWhiteSpace(log.POLICY_NO) ? string.Empty : log.POLICY_NO
                     };
                 default:
                     return new Transaction
                     {
+
                         Type = TransactionType.Transaction,
                         EntryDate = log.CREATED_ON ?? DateTime.MinValue,
                         EffectiveDate = log.TRANSACTION_EFF_DATE,
                         UserId = log.CREATED_BY ?? "",
                         AccountId = log.ACCOUNT_SYSTEM_CODE.ToString(),
                         OriginalTransactionDescription = log.TRANSACTION_TYPE.ToString(),
-                        PolicyNo = string.IsNullOrWhiteSpace(log.POLICY_NO) ? string.Empty : log.POLICY_NO
+                        PolicyNo = string.IsNullOrWhiteSpace(log.POLICY_NO) ? string.Empty : log.POLICY_NO,
+                        Amount = log.PAYMENT ?? 0
                     };
             }
         }

@@ -207,5 +207,43 @@ namespace BillingPocTwo.BillingData.Api.Controllers
             }
         }
 
+        [HttpGet("bypolicynumberandterm")]
+        public async Task<IActionResult> GetTransactionsByPolicyNumberAndTerm(
+            [FromQuery] string policyNumber,
+            [FromQuery] decimal policyTermId,
+            [FromQuery] DateTime? fromDate = null,
+            [FromQuery] DateTime? toDate = null)
+        {
+            if (string.IsNullOrWhiteSpace(policyNumber))
+                return BadRequest("Policy number cannot be null or empty.");
+
+            if (policyTermId == 0)
+                return BadRequest("Policy term ID cannot be zero.");
+
+            try
+            {
+                var transactionsQuery = _context.TransactionLogs
+                    .Where(tl => tl.POLICY_NO == policyNumber && tl.POLICY_TERM_ID == policyTermId);
+
+                if (fromDate.HasValue)
+                    transactionsQuery = transactionsQuery.Where(tl => tl.CREATED_ON >= fromDate.Value);
+
+                if (toDate.HasValue)
+                    transactionsQuery = transactionsQuery.Where(tl => tl.CREATED_ON <= toDate.Value);
+
+                var transactions = await transactionsQuery
+                    .OrderBy(tl => tl.CREATED_ON)
+                    .ToListAsync();
+
+                if (!transactions.Any())
+                    return NotFound("No transactions found for the given policy number and term ID.");
+
+                return Ok(transactions);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
     }
 }

@@ -71,7 +71,24 @@
             </div>
             <div class="form-group mb-2">
                 <small class="text-muted">Search by policy, user, description, or year/date (e.g., 2020 or 01/01/2020)</small>
-                <input class="form-control" type="text" placeholder="Search transactions..." @bind="TransactionSearchTerm" @bind:event="oninput" />
+                <div style="position: relative; display: flex;">
+                    <input class="form-control" type="text"
+                           placeholder="Search transactions..."
+                           @bind="TransactionSearchTerm"
+                           @bind:event="oninput"
+                           style="padding-right: 2rem;" />
+                    @if (!string.IsNullOrEmpty(TransactionSearchTerm))
+                    {
+                        <button type="button"
+                                class="input-clear-btn"
+                                style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); color: #888;"
+                                @onclick="() => TransactionSearchTerm = string.Empty"
+                                tabindex="-1"
+                                aria-label="Clear search">
+                            &#10005;
+                        </button>
+                    }
+                </div>
             </div>
 
             <div class="mb-2">
@@ -81,13 +98,13 @@
             <table class="table table-bordered table-sm">
                 <thead>
                     <tr>
-                        <th>TRANSACTION TYPE</th>
+                        <th>TRANSACTION ID</th>
                         <th>TYPE</th>
                         <th>ENTRY DATE</th>
                         <th>EFFECTIVE DATE</th>
                         <th>USER</th>
-                        <th>ACCOUNT #</th>
                         <th>POLICY #</th>
+                        <th>AMOUNT</th>
                         <th>DESCRIPTION</th>
                     </tr>
                 </thead>
@@ -109,12 +126,11 @@
                             foreach (var transaction in group.Value)
                             {
                                 <tr>
-                                    <td></td>
+                                    <td>@transaction.TransactionId</td>
                                     <td>@transaction.Type</td>
                                     <td>@transaction.EntryDate.ToShortDateString()</td>
                                     <td>@transaction.EffectiveDate.ToShortDateString()</td>
                                     <td>@transaction.UserId</td>
-                                    <td>@AccountNumber</td>
                                     <td>
                                         @if (!string.IsNullOrWhiteSpace(transaction.PolicyNo))
                                         {
@@ -125,6 +141,7 @@
                                             </a>
                                         }
                                     </td>
+                                    <td>@((transaction.Amount.HasValue && transaction.Amount.Value != 0) ? transaction.Amount.Value.ToString("N2") : "")</td>
                                     <td>@transaction.OriginalTransactionDescription</td>
                                 </tr>
                             }
@@ -314,6 +331,8 @@
             .Select(g => new KeyValuePair<string, List<ITransaction>>(
                 g.Key,
                 g.Value.Where(t =>
+                    (t.TransactionId?.ToString().Contains(TransactionSearchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (t.Amount?.ToString().Replace(",", "").Contains(TransactionSearchTerm.Replace(",", ""), StringComparison.OrdinalIgnoreCase) ?? false) ||
                     (t.PolicyNo?.Contains(TransactionSearchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
                     (t.OriginalTransactionDescription?.Contains(TransactionSearchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
                     (t.UserId?.Contains(TransactionSearchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
