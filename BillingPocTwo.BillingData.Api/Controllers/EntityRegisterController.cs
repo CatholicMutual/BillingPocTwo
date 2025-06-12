@@ -200,6 +200,47 @@ namespace BillingPocTwo.BillingData.Api.Controllers
             return Ok(result);
         }
 
+        // In EntityRegisterController.cs
+        [HttpGet("details/account/wildcard/{pattern}")]
+        public async Task<ActionResult<List<AccountDetailsDto>>> GetByAccountWildcard(string pattern)
+        {
+            // Find all matching entity registers
+            var entityRegisters = await _context.EntityRegisters
+                .Where(e => EF.Functions.Like(e.SOURCE_SYSTEM_ENTITY_CODE, pattern))
+                .ToListAsync();
+
+            var results = new List<AccountDetailsDto>();
+
+            foreach (var entityRegister in entityRegisters)
+            {
+                // Fetch related address
+                var entityAddress = await _context.EntityAddresses
+                    .FirstOrDefaultAsync(e => e.SYSTEM_ENTITY_CODE == entityRegister.SYSTEM_ENTITY_CODE);
+
+                // Fetch related policy term IDs
+                var policyTermIds = await _context.PolicyEntityIntermediate
+                    .Where(pe => pe.SYSTEM_ENTITY_CODE == entityRegister.SYSTEM_ENTITY_CODE)
+                    .Select(pe => pe.POLICY_TERM_ID)
+                    .ToListAsync();
+
+                results.Add(new AccountDetailsDto
+                {
+                    SYSTEM_ENTITY_CODE = entityRegister.SYSTEM_ENTITY_CODE,
+                    SOURCE_SYSTEM_ENTITY_CODE = entityRegister.SOURCE_SYSTEM_ENTITY_CODE,
+                    DOING_BUSINESS_AS_NAME = entityRegister.DOING_BUSINESS_AS_NAME,
+                    FULL_NAME = entityAddress?.FULL_NAME,
+                    ADDRESS1 = entityAddress?.ADDRESS1,
+                    ADDRESS2 = entityAddress?.ADDRESS2,
+                    CITY = entityAddress?.CITY,
+                    STATE = entityAddress?.STATE,
+                    ZIP_CODE = entityAddress?.ZIP_CODE,
+                    PolicyTermIds = policyTermIds
+                });
+            }
+
+            return Ok(results);
+        }
+
         [HttpGet("details/dashboard/{accountNumber}")]
         public async Task<IActionResult> GetAccountDetails(string accountNumber)
         {

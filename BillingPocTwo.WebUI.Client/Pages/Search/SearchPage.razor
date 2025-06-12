@@ -6,9 +6,15 @@
 
 <h3>Search</h3>
 
-<div class="form-group">
-    <label for="searchTerm">Account Number:</label>
-    <input type="text" id="searchTerm" class="form-control" @bind="SearchTerm" @oninput="OnSearchTermChanged" placeholder="Ex: 0084-0000" />
+<div class="form-group">    
+    <div>
+        <label for="searchTerm">Account Number, Name or Policy Number:</label>
+        <input type="text" id="searchTerm" class="form-control"
+               @bind="SearchTerm"
+               @bind:event="oninput"
+               @onkeydown="HandleKeyDown" />
+    </div>
+    <small class="text-muted">* allowed as a wildcard (e.g.,0084*)</small>
 </div>
 
 <button class="btn btn-primary" @onclick="PerformSearch">Search</button>
@@ -58,6 +64,14 @@ else if (!string.IsNullOrEmpty(ErrorMessage))
 
     private string DashboardModalClass => ShowModal ? "dashboard-modal-overlay d-block" : "dashboard-modal-overlay d-none";
 
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await PerformSearch();
+        }
+    }
+
     private async Task PerformSearch()
     {
         IsLoading = true;
@@ -68,7 +82,19 @@ else if (!string.IsNullOrEmpty(ErrorMessage))
 
         try
         {
-            if (IsAccountNumber(SearchTerm))
+            if (SearchTerm.Contains("*"))
+            {
+                // Wildcard search: replace * with % for SQL LIKE compatibility
+                var wildcardTerm = SearchTerm.Replace("*", "%");
+                // Call a new or existing API endpoint that supports wildcard search
+                SearchResults = await client.GetFromJsonAsync<List<EntityDetailsDto>>(
+                    $"api/EntityRegister/details/account/wildcard/{wildcardTerm}");
+                if (SearchResults == null || !SearchResults.Any())
+                {
+                    ErrorMessage = "No results found for the provided wildcard search.";
+                }
+            }
+            else if (IsAccountNumber(SearchTerm))
             {
                 // Search by account number
                 var result = await client.GetFromJsonAsync<EntityDetailsDto>($"api/EntityRegister/details/{SearchTerm}");
