@@ -70,7 +70,7 @@
                 <button class="btn btn-primary" @onclick="LoadTransactions">View</button>
             </div>
             <div class="form-group mb-2">
-                <small class="text-muted">Search by type, policy, transaction ID, user, description, amount or year/date (e.g., 2020 or 01/01/2020)</small>
+                <small class="text-muted">Search by type, policy, transaction ID, user, description, amount, year/date (e.g., 2020 or 01/01/2020) or month/day (e.g., 12/1)</small>
                 <div style="position: relative; display: flex;">
                     <input class="form-control" type="text"
                            placeholder="Search transactions..."
@@ -164,14 +164,14 @@
                 </div>
                 <div class="modal-body">
                     <p><strong>Policy #:</strong> @SelectedPolicy?.POLICY_NO</p>
-                    <p><strong>Transaction Type:</strong> @SelectedPolicy?.TRANSACTION_TYPE</p>
+                    <p><strong>Policy Term ID:</strong> @SelectedPolicy?.POLICY_TERM_ID</p>
                     <p><strong>Entry Date:</strong> @SelectedPolicy?.CREATED_ON?.ToShortDateString()</p>
-                    <p><strong>Effective Date:</strong> @SelectedPolicy?.TRANSACTION_EFF_DATE.ToShortDateString()</p>
-                    <p><strong>Expiry Date:</strong> @SelectedPolicy?.TRANSACTION_EXPIRY_DATE?.ToShortDateString()</p>
+                    <p><strong>Effective Date:</strong> @SelectedPolicy?.POLICY_EFFECTIVE_DATE?.ToShortDateString()</p>
+                    <p><strong>Expiration Date:</strong> @SelectedPolicy?.POLICY_EXPIRATION_DATE?.ToShortDateString()</p>
                     <p><strong>User:</strong> @SelectedPolicy?.CREATED_BY</p>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-primary" @onclick="() => OpenPolicy(SelectedPolicy?.POLICY_NO)">Open Policy</button>
+                    <button class="btn btn-primary" @onclick="() => OpenPolicy(SelectedPolicy?.POLICY_NO, SelectedPolicy?.POLICY_TERM_ID)">Open Policy</button>
                     <button class="btn btn-secondary" @onclick="ClosePolicyModal">Cancel</button>
                 </div>
             </div>
@@ -322,7 +322,18 @@
         }
     };
 
-    private string TransactionSearchTerm { get; set; } = string.Empty;
+    private string _transactionSearchTerm = string.Empty;
+    private string TransactionSearchTerm {
+    get => _transactionSearchTerm;
+    set
+    {
+        if (_transactionSearchTerm != value)
+        {
+            _transactionSearchTerm = value;
+            ExpandGroupsWithMatches();
+        }
+    }
+}
 
     private IEnumerable<KeyValuePair<string, List<ITransaction>>> FilteredGroupedMappedTransactions =>
     string.IsNullOrWhiteSpace(TransactionSearchTerm)
@@ -339,10 +350,31 @@
                     t.EntryDate.ToString("yyyy-MM-dd").Contains(TransactionSearchTerm, StringComparison.OrdinalIgnoreCase) ||
                     t.EntryDate.Year.ToString().Contains(TransactionSearchTerm, StringComparison.OrdinalIgnoreCase) ||
                     t.EffectiveDate.ToString("yyyy-MM-dd").Contains(TransactionSearchTerm, StringComparison.OrdinalIgnoreCase) ||
-                    t.EffectiveDate.Year.ToString().Contains(TransactionSearchTerm, StringComparison.OrdinalIgnoreCase)
+                    t.EffectiveDate.Year.ToString().Contains(TransactionSearchTerm, StringComparison.OrdinalIgnoreCase) ||
+                    IsDateMatch(t.EntryDate, TransactionSearchTerm) ||
+                    IsDateMatch(t.EffectiveDate, TransactionSearchTerm)
                 ).ToList()
             ))
             .Where(g => g.Value.Any());
+
+    private bool IsDateMatch(DateTime date, string searchTerm)
+    {
+        // Try full date first
+        var fullDateFormats = new[] { "M/d/yyyy", "MM/dd/yyyy", "M/dd/yyyy", "MM/d/yyyy" };
+        if (DateTime.TryParseExact(searchTerm, fullDateFormats, null, System.Globalization.DateTimeStyles.None, out var searchDate))
+        {
+            return date.Date == searchDate.Date;
+        }
+
+        // Try month/day only
+        var monthDayFormats = new[] { "M/d", "MM/dd", "M/dd", "MM/d" };
+        if (DateTime.TryParseExact(searchTerm, monthDayFormats, null, System.Globalization.DateTimeStyles.None, out var monthDay))
+        {
+            return date.Month == monthDay.Month && date.Day == monthDay.Day;
+        }
+
+        return false;
+    }
 
     private void ExpandAllTransactionGroups()
     {
@@ -354,30 +386,63 @@
         ExpandedTransactionGroups.Clear();
     }
 
+    private void ExpandGroupsWithMatches()
+    {
+        if (string.IsNullOrWhiteSpace(TransactionSearchTerm))
+        {
+            ExpandedTransactionGroups.Clear();
+            return;
+        }
+
+        var matchingKeys = FilteredGroupedMappedTransactions.Select(g => g.Key).ToHashSet();
+        ExpandedTransactionGroups = matchingKeys;
+    }
+
     private void ToggleTransactionGroup(string groupKey)
     {
         if (!ExpandedTransactionGroups.Add(groupKey))
             ExpandedTransactionGroups.Remove(groupKey);
     }
 
-    private void ShowPolicyDetails(ITransaction transaction)
+    private async Task ShowPolicyDetails(ITransaction transaction)
     {
-        if (transaction != null)
+        if (transaction == null || string.IsNullOrWhiteSpace(transaction.PolicyNo) || string.IsNullOrWhiteSpace(transaction.PolicyTermId.ToString()))
+            return;
+
+        if (!transaction.PolicyTermId.HasValue)
+            return;
+
+        var termId = transaction.PolicyTermId.Value;
+
+        var client = HttpClientFactory.CreateClient("BillingDataApi");
+        try
         {
-            // If you want to show more details, you may want to map/cast to TransactionDto or use the ITransaction directly
-            SelectedPolicy = new TransactionDto
-                {
-                    POLICY_NO = transaction.PolicyNo,
-                    TRANSACTION_TYPE = transaction.OriginalTransactionDescription,
-                    CREATED_ON = transaction.EntryDate,
-                    TRANSACTION_EFF_DATE = transaction.EffectiveDate,
-                // Set other fields as needed
-                // TRANSACTION_EXPIRY_DATE = ...,
-                // CREATED_BY = transaction.UserId,
-                };
-            ShowPolicyModal = true;
+            var policyDetails = await client.GetFromJsonAsync<PolicyDetailsDto>(
+                $"api/Policy/ByPolicyNumber/{transaction.PolicyNo}/{termId}");
+
+            if (policyDetails != null)
+            {
+                SelectedPolicy = new TransactionDto
+                    {
+                        POLICY_NO = policyDetails.POLICY_NO,
+                        POLICY_TERM_ID = policyDetails.POLICY_TERM_ID,
+                        TRANSACTION_TYPE = transaction.OriginalTransactionDescription,
+                        CREATED_ON = transaction.EntryDate,
+                        TRANSACTION_EFF_DATE = transaction.EffectiveDate,
+                        POLICY_EFFECTIVE_DATE = policyDetails.POLICY_EFFECTIVE_DATE,
+                        POLICY_EXPIRATION_DATE = policyDetails.POLICY_EXPIRATION_DATE,
+                        CREATED_BY = policyDetails.CREATED_BY
+                    };
+                ShowPolicyModal = true;
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            // Optionally show a message to the user
+            Console.WriteLine($"Policy details not found: {ex.Message}");
         }
     }
+
     private string? SelectedPolicyNumber { get; set; }
 
     private TransactionDto? ToTransactionDto(TRANSACTION_LOG? log)
@@ -402,11 +467,11 @@
         SelectedPolicy = null;
     }
 
-    private void OpenPolicy(string? policyNo)
+    private void OpenPolicy(string? policyNo, decimal? termId)
     {
         if (!string.IsNullOrEmpty(policyNo))
         {
-            NavigationManager.NavigateTo($"/policy-details/{policyNo}");
+            NavigationManager.NavigateTo($"/policy-details/{policyNo}/{termId}");
         }
     }
 
@@ -421,6 +486,15 @@
         public string TransactionType { get; set; }
         public List<TRANSACTION_LOG> Transactions { get; set; }
         public List<ASSIGNED_PAYMENT> Payments { get; set; }
+    }
+
+    public class PolicyDetailsDto
+    {
+        public string POLICY_NO { get; set; }
+        public decimal POLICY_TERM_ID { get; set; }
+        public DateTime POLICY_EFFECTIVE_DATE { get; set; }
+        public DateTime POLICY_EXPIRATION_DATE { get; set; }
+        public string CREATED_BY { get; set; }
     }
 
 }

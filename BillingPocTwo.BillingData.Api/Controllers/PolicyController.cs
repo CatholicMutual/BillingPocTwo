@@ -132,6 +132,47 @@ namespace BillingPocTwo.BillingData.Api.Controllers
             return Ok(policy);
         }
 
+        // GET: api/Policy/ByPolicyNumber/{policyNo}/{termId}
+        [HttpGet("ByPolicyNumber/{policyNo}/{termId}")]
+        public async Task<IActionResult> GetPolicyByPolicyNumber(string policyNo, decimal termId)
+        {
+            if (string.IsNullOrWhiteSpace(policyNo))
+            {
+                return BadRequest("POLICY_NO cannot be null or empty.");
+            }
+
+            var policy = await _context.PolicyRegisters
+                .FirstOrDefaultAsync(pr => pr.POLICY_NO == policyNo && pr.POLICY_TERM_ID == termId);
+
+            if (policy == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(policy);
+        }
+
+        // GET: api/Policy/ByPolicyNumberList/{policyNo}/{termId}
+        [HttpGet("ByPolicyNumberList/{policyNo}/{termId}")]
+        public async Task<IActionResult> GetPolicyByPolicyNumberList(string policyNo, decimal termId)
+        {
+            if (string.IsNullOrWhiteSpace(policyNo))
+            {
+                return BadRequest("POLICY_NO cannot be null or empty.");
+            }
+
+            var policy = await _context.PolicyRegisters
+                .Where(pr => pr.POLICY_NO == policyNo && pr.POLICY_TERM_ID == termId)
+                .ToListAsync();
+
+            if (policy == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(policy);
+        }
+
         // GET: api/Policy/ByPolicyNoActive/{policyNo}
         [HttpGet("ByPolicyNumActive/{policyNo}")]
         public async Task<IActionResult> GetActivePolicyByPolicyNumber(string policyNo)

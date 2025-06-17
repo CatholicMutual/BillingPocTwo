@@ -27,6 +27,7 @@ namespace BillingPocTwo.Shared.Factories
                         ReceivedAmount = 0, // Set if you have an amount field
                         OriginalTransactionDescription = log.TRANSACTION_TYPE.ToString(),
                         PolicyNo = string.IsNullOrWhiteSpace(log.POLICY_NO) ? string.Empty : log.POLICY_NO,
+                        PolicyTermId = log.POLICY_TERM_ID ?? 0,
                         Amount = log.PAYMENT ?? 0 // Assuming PAYMENT is the amount field
                     };
                 case OriginalTransactionType.BILL:
@@ -42,7 +43,8 @@ namespace BillingPocTwo.Shared.Factories
                         AccountId = log.ACCOUNT_SYSTEM_CODE.ToString(),
                         Amount = log.PAYMENT ?? 0, // Set if you have an amount field
                         OriginalTransactionDescription = log.TRANSACTION_TYPE.ToString(),
-                        PolicyNo = string.IsNullOrWhiteSpace(log.POLICY_NO) ? string.Empty : log.POLICY_NO
+                        PolicyNo = string.IsNullOrWhiteSpace(log.POLICY_NO) ? string.Empty : log.POLICY_NO,
+                        PolicyTermId = log.POLICY_TERM_ID ?? 0
                     };
                 case OriginalTransactionType.ENDORSEMENT:
                     return new Endorsement
@@ -57,6 +59,7 @@ namespace BillingPocTwo.Shared.Factories
                         // Set other amounts if available
                         OriginalTransactionDescription = log.TRANSACTION_TYPE.ToString(),
                         PolicyNo = string.IsNullOrWhiteSpace(log.POLICY_NO) ? string.Empty : log.POLICY_NO,
+                        PolicyTermId = log.POLICY_TERM_ID ?? 0,
                         Amount = log.PAYMENT ?? 0
                     };
                 case OriginalTransactionType.NONMONEY_ENDORSEMENT:
@@ -71,6 +74,7 @@ namespace BillingPocTwo.Shared.Factories
                         AccountId = log.ACCOUNT_SYSTEM_CODE.ToString(),
                         OriginalTransactionDescription = log.TRANSACTION_TYPE.ToString(),
                         PolicyNo = string.IsNullOrWhiteSpace(log.POLICY_NO) ? string.Empty : log.POLICY_NO,
+                        PolicyTermId = log.POLICY_TERM_ID ?? 0,
                         Amount = log.PAYMENT ?? 0
                     };
                 case OriginalTransactionType.PAYMENT_TRANSFER_INTERNAL:
@@ -85,6 +89,7 @@ namespace BillingPocTwo.Shared.Factories
                         ReceivedAmount = 0, // Set if you have an amount field
                         OriginalTransactionDescription = log.TRANSACTION_TYPE.ToString(),
                         PolicyNo = string.IsNullOrWhiteSpace(log.POLICY_NO) ? string.Empty : log.POLICY_NO,
+                        PolicyTermId = log.POLICY_TERM_ID ?? 0,
                         Amount = log.PAYMENT ?? 0
                     };
                 case OriginalTransactionType.RENEWAL:
@@ -100,7 +105,8 @@ namespace BillingPocTwo.Shared.Factories
                         // Set other amounts if available
                         OriginalTransactionDescription = log.TRANSACTION_TYPE.ToString(),
                         Amount = log.PAYMENT ?? 0,
-                        PolicyNo = string.IsNullOrWhiteSpace(log.POLICY_NO) ? string.Empty : log.POLICY_NO
+                        PolicyNo = string.IsNullOrWhiteSpace(log.POLICY_NO) ? string.Empty : log.POLICY_NO,
+                        PolicyTermId = log.POLICY_TERM_ID ?? 0
                     };
                 default:
                     return new Transaction
@@ -113,6 +119,7 @@ namespace BillingPocTwo.Shared.Factories
                         AccountId = log.ACCOUNT_SYSTEM_CODE.ToString(),
                         OriginalTransactionDescription = log.TRANSACTION_TYPE.ToString(),
                         PolicyNo = string.IsNullOrWhiteSpace(log.POLICY_NO) ? string.Empty : log.POLICY_NO,
+                        PolicyTermId = log.POLICY_TERM_ID ?? 0,
                         Amount = log.PAYMENT ?? 0
                     };
             }

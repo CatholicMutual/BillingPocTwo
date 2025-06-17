@@ -11,6 +11,7 @@ namespace BillingPocTwo.Shared.Interfaces
         string AccountId { get; set; }
         string? OriginalTransactionDescription { get; set; }
         string? PolicyNo { get; set; }
+        decimal? PolicyTermId { get; set; }
         decimal? TransactionId { get; set; }
         decimal? Amount { get; set; }
     }

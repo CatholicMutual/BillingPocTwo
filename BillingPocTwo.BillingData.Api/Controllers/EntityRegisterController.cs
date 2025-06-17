@@ -127,35 +127,28 @@ namespace BillingPocTwo.BillingData.Api.Controllers
         [HttpGet("details/name/{name}")]
         public async Task<IActionResult> GetEntityDetailsByName(string name)
         {
-            var entityRegisters = await _context.EntityRegisters
-                .Where(e => e.DOING_BUSINESS_AS_NAME.Contains(name))
-                .ToListAsync();
-
-            if (!entityRegisters.Any())
-            {
-                return NotFound($"No ENTITY_REGISTER found for name containing: {name}");
-            }
-
-            var results = new List<object>();
-
-            foreach (var entityRegister in entityRegisters)
-            {
-                var entityAddress = await _context.EntityAddresses
-                    .FirstOrDefaultAsync(e => e.SYSTEM_ENTITY_CODE == entityRegister.SYSTEM_ENTITY_CODE);
-
-                var policyTermIds = await _context.PolicyEntityIntermediate
-                    .Where(pe => pe.SYSTEM_ENTITY_CODE == entityRegister.SYSTEM_ENTITY_CODE)
-                    .Select(pe => pe.POLICY_TERM_ID)
-                    .ToListAsync();
-
-                results.Add(new
+            var results = await (
+                from address in _context.EntityAddresses
+                join entity in _context.EntityRegisters
+                    on address.SYSTEM_ENTITY_CODE equals entity.SYSTEM_ENTITY_CODE
+                where address.FULL_NAME.Contains(name)
+                select new
                 {
-                    entityRegister.SYSTEM_ENTITY_CODE,
-                    entityAddress?.FULL_NAME,
-                    entityAddress?.CITY,
-                    entityAddress?.STATE,
-                    PolicyTermIds = policyTermIds
-                });
+                    entity.SYSTEM_ENTITY_CODE,
+                    entity.SOURCE_SYSTEM_ENTITY_CODE,
+                    address.FULL_NAME,
+                    address.CITY,
+                    address.STATE,
+                    PolicyTermIds = _context.PolicyEntityIntermediate
+                        .Where(pe => pe.SYSTEM_ENTITY_CODE == entity.SYSTEM_ENTITY_CODE)
+                        .Select(pe => pe.POLICY_TERM_ID)
+                        .ToList()
+                }
+            ).ToListAsync();
+
+            if (!results.Any())
+            {
+                return NotFound($"No ENTITY_ADDRESS_INFO found for FULL_NAME containing: {name}");
             }
 
             return Ok(results);

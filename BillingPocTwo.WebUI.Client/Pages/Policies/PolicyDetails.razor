@@ -1,4 +1,4 @@
-﻿@page "/policy-details/{PolicyNo}"
+﻿@page "/policy-details/{PolicyNo}/{TermId}"
 
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager NavigationManager
@@ -140,7 +140,7 @@ else
         else
         {
             <div class="form-group mb-2">
-                <small class="text-muted">Search by type, code, name, address, city, or year/date (e.g., 2020 or 01/01/2020)</small>
+                <small class="text-muted">Search by name, address, city, or ZIP</small>
                 <div style="position: relative; display: flex;">
                     <input class="form-control" type="text"
                            placeholder="Search policy entities..."
@@ -313,6 +313,7 @@ else
 
 @code {
     [Parameter] public string PolicyNo { get; set; }
+    [Parameter] public string TermId { get; set; }
     private string? RenewalNumber;
     private string? AccountNumber;
 
@@ -368,7 +369,7 @@ else
         try
         {
             var client = HttpClientFactory.CreateClient("BillingDataApi");
-            var result = await client.GetFromJsonAsync<List<POLICY_REGISTER>>($"api/Policy/ByPolicyNumActive/{PolicyNo}");
+            var result = await client.GetFromJsonAsync<List<POLICY_REGISTER>>($"api/Policy/ByPolicyNumberList/{PolicyNo}/{TermId}");
 
             var accountBillableResult = await client.GetFromJsonAsync<List<POLICY_ENTITY_REGISTER>>($"api/Policy/PolicyEntitiesByTermId/{result.FirstOrDefault<POLICY_REGISTER>().POLICY_TERM_ID}");
             var accountDetailsResult = await client.GetFromJsonAsync<ENTITY_REGISTER>($"api/EntityRegister/details/system/{result.FirstOrDefault<POLICY_REGISTER>().BILL_TO_SYSTEM_CODE}");
